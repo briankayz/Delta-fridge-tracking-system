@@ -69,7 +69,7 @@ The system tracks commercial beverage coolers across the Harare Metropolitan clu
 
 ## Real-Time Telemetry Listener (`src/services/useTelemetryFeed.ts`)
 
-- Listens on WebSocket (`ws://127.0.0.1:8080/ws/telemetry`) and BroadcastChannel (`delta-telemetry-bus`).
+- Subscribes to the backend WebSocket (`ws://<host>:8787/ws/telemetry`; override with `VITE_API_URL`). See the root README and CLAUDE.md for the event contract.
 - When an emergency breach event is received from the Mobile Beacon (`Phone A`):
   1. Dynamically plots a red pulsing marker and displacement route on the Harare map.
   2. Increments the **AI Anomaly Alerts** count in the KPI summary strip.

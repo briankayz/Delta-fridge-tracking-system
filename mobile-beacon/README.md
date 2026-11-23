@@ -57,7 +57,7 @@ The application replicates the visual layouts, colors, typography, and micro-cop
 
 ### State Broadcaster Service (`src/services/telemetryStream.ts`)
 - Broadcasts sensor updates every **5 seconds** in nominal mode and **1 second** during breach burst mode.
-- Connects to local WebSocket server (`ws://127.0.0.1:8080/ws/telemetry`) and syncs via HTTP `POST /api/v1/telemetry`.
+- Sends telemetry via HTTP `POST /api/v1/telemetry` to `http://<Metro host IP>:8787` (override with `EXPO_PUBLIC_API_URL`) and displays the backend's risk verdict. See the root README.
 - When "SIMULATE DISPLACEMENT EVENT" is triggered, it instantly emits a payload matching the `FridgeTelemetryPayload` schema:
   ```json
   {
