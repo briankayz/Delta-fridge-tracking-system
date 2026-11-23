@@ -1,29 +1,54 @@
 {
   "expo": {
-    "name": "Delta Asset Guard Beacon",
+    "name": "Delta Asset Guard",
     "slug": "delta-asset-guard-beacon",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "dark",
+    "userInterfaceStyle": "light",
     "splash": {
-      "backgroundColor": "#0b1326"
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#082563"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "Scan the QR code on a cooler beacon.",
+        "NSLocationWhenInUseUsageDescription": "Show alerts near you and record where a beacon was installed."
+      }
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#0b1326"
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#082563"
       },
       "permissions": [
         "ACCESS_FINE_LOCATION",
-        "ACCESS_COARSE_LOCATION"
+        "ACCESS_COARSE_LOCATION",
+        "CAMERA"
       ]
     },
     "web": {
-      "favicon": "./assets/favicon.png"
-    }
+      "favicon": "./assets/favicon.png",
+      "name": "Delta Asset Guard",
+      "themeColor": "#082563",
+      "backgroundColor": "#082563"
+    },
+    "plugins": [
+      "expo-secure-store",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Scan the QR code on a cooler beacon."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Show alerts near you and record where a beacon was installed."
+        }
+      ]
+    ]
   }
 }
-

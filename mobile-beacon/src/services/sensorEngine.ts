@@ -47,8 +47,13 @@ class SensorEngine {
   private batteryLevel = 0.98;
   private isBatteryCharging = true;
 
-  constructor() {
-    this.initSensors();
+  private started = false;
+
+  /** Requests sensor permissions and starts listening. Called only when demo beacon mode is turned on. */
+  start() {
+    if (this.started) return;
+    this.started = true;
+    void this.initSensors();
   }
 
   private async initSensors() {
@@ -324,7 +329,9 @@ class SensorEngine {
   public cleanup() {
     if (this.accelSubscription) {
       this.accelSubscription.remove();
+      this.accelSubscription = null;
     }
+    this.started = false;
   }
 }
 

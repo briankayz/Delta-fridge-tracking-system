@@ -1,0 +1,87 @@
+// All user-facing text lives here so the app can be translated (e.g. Shona, Ndebele) by
+// adding another dictionary with the same keys. Keep sentences short and plain.
+export const en = {
+  appName: 'Delta Asset Guard',
+  signIn: 'Sign in',
+  signingIn: 'Signing in…',
+  email: 'Work email',
+  password: 'Password',
+  serverAddress: 'Server address',
+  changeServer: 'Change server',
+  signOut: 'Sign out',
+  cantReachServer: 'Can’t reach the Asset Guard server. Check your data connection.',
+
+  tabRespond: 'Respond',
+  tabInstall: 'Install',
+  tabCheck: 'Check',
+  tabMore: 'More',
+
+  // Respond
+  respondTitle: 'Alerts near you',
+  respondEmpty: 'No open alerts. All coolers are safe.',
+  kindDisplacement: 'Cooler moved',
+  kindPower: 'Cooler unplugged',
+  kindSignal: 'Beacon not reporting',
+  away: 'away',
+  openFor: 'Open for',
+  directions: 'Directions',
+  callStore: 'Call the store',
+  whatDidYouFind: 'What did you find?',
+  foundIt: 'Found it here',
+  recovered: 'Cooler recovered',
+  authorisedMove: 'It was an approved move',
+  cantFind: 'Can’t find it',
+  addNote: 'Add a note (optional)',
+  sent: 'Sent to the control room',
+  queued: 'No signal. Saved and will send automatically.',
+  alreadyClosed: 'This alert is already closed.',
+
+  // Install
+  installTitle: 'Install a beacon',
+  step1: 'Scan the cooler’s QR code',
+  step1Hint: 'Or type the ID printed on the beacon sticker.',
+  scan: 'Scan QR code',
+  typeId: 'Beacon ID',
+  next: 'Next',
+  step2: 'Which store is this cooler in?',
+  nearestFirst: 'Nearest stores first',
+  searchStores: 'Search stores',
+  step3: 'How much can the cooler move before an alarm?',
+  fenceSmall: 'Small · 50 m',
+  fenceSmallHint: 'Cooler stays in one spot on the shop floor',
+  fenceMedium: 'Medium · 100 m',
+  fenceMediumHint: 'Bigger shop or yard',
+  fenceLarge: 'Large · 250 m',
+  fenceLargeHint: 'Warehouse or large premises',
+  protect: 'Protect this cooler',
+  protecting: 'Saving…',
+  protected: 'This cooler is now protected',
+  protectedHint: 'The control room can see it. You can install the next one.',
+  installAnother: 'Install another',
+  usingPhoneLocation: 'Using your phone’s location as the cooler’s home.',
+  usingStoreLocation: 'Using the store’s registered location as the cooler’s home.',
+
+  // Check
+  checkTitle: 'Check a cooler',
+  checkHint: 'Scan or type the beacon ID to see if the cooler is safe.',
+  check: 'Check',
+  statusProtected: 'Protected',
+  statusProtectedHint: 'In its store, plugged in and reporting.',
+  statusMoved: 'Moved',
+  statusUnplugged: 'Unplugged',
+  statusOffline: 'Not reporting',
+  statusNotInstalled: 'Not installed yet',
+  statusMoving: 'Approved move in progress',
+  lastReport: 'Last report',
+
+  // More
+  account: 'Your account',
+  demoMode: 'Demo mode',
+  demoHint: 'Use this phone as a cooler’s beacon to show how alerts work. Only for demonstrations.',
+  beaconMode: 'Use this phone as the beacon',
+  advanced: 'Advanced',
+  pendingSync: 'waiting to send',
+};
+
+export type Strings = typeof en;
+export const t: Strings = en;

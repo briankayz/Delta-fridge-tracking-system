@@ -135,6 +135,9 @@ export interface Incident {
   origin: { lat: number; lng: number; name: string };
   retailer_name: string | null;
   region: string | null;
+  /** Latest reported position of the cooler (for responders). */
+  position: { lat: number; lng: number; at: string } | null;
+  retailer_contact: { name: string | null; phone: string | null };
   events?: IncidentEvent[];
 }
 

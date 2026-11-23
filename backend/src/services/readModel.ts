@@ -156,11 +156,13 @@ export async function fleetSummary(q: Queryable, o: ReadOptions & { region?: str
 }
 
 const INCIDENT_SQL = `
-SELECT i.*, u.name AS assigned_name, r.name AS retailer_name, r.region
+SELECT i.*, u.name AS assigned_name, r.name AS retailer_name, r.region, r.contact_name, r.contact_phone,
+       s.lat AS asset_lat, s.lng AS asset_lng, s.last_seen AS asset_last_seen
   FROM incidents i
   JOIN assets a ON a.id = i.asset_id
   LEFT JOIN retailers r ON r.id = a.retailer_id
-  LEFT JOIN users u ON u.id = i.assigned_to`;
+  LEFT JOIN users u ON u.id = i.assigned_to
+  LEFT JOIN asset_state s ON s.asset_id = i.asset_id`;
 
 function toIncident(row: Record<string, any>): Incident {
   return {
@@ -182,6 +184,8 @@ function toIncident(row: Record<string, any>): Incident {
     origin: { lat: row.origin_lat, lng: row.origin_lng, name: row.origin_name },
     retailer_name: row.retailer_name ?? null,
     region: row.region ?? null,
+    position: row.asset_lat != null ? { lat: row.asset_lat, lng: row.asset_lng, at: row.asset_last_seen } : null,
+    retailer_contact: { name: row.contact_name ?? null, phone: row.contact_phone ?? null },
   };
 }
 
