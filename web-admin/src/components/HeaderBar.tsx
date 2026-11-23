@@ -1,16 +1,28 @@
 import React from 'react';
+import { ConnectionState } from '../types';
 
 interface HeaderBarProps {
   onSearchChange?: (query: string) => void;
   onSimulateBreach?: () => void;
   activeCoolersCount?: number;
+  connection?: ConnectionState;
+  alertCount?: number;
 }
+
+const CONNECTION_UI: Record<ConnectionState, { dot: string; label: string }> = {
+  live: { dot: 'bg-[#10B981] animate-pulse', label: 'System Online' },
+  connecting: { dot: 'bg-[#F59E0B] animate-pulse', label: 'Connecting' },
+  offline: { dot: 'bg-[#EF4444]', label: 'Backend Offline' },
+};
 
 export const HeaderBar: React.FC<HeaderBarProps> = ({
   onSearchChange,
   onSimulateBreach,
   activeCoolersCount = 1420,
+  connection = 'connecting',
+  alertCount = 0,
 }) => {
+  const conn = CONNECTION_UI[connection];
   return (
     <header className="fixed top-0 left-0 right-0 w-full z-50 bg-[#315B7C] shadow-[0_1px_8px_rgba(0,0,0,0.12)]">
       <div className="h-16 w-full px-6 flex items-center justify-between gap-4">
@@ -28,9 +40,9 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
                 </span>
               </div>
               <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-[#47a8ff] animate-pulse"></span>
+                <span className={`w-2 h-2 rounded-full ${conn.dot}`}></span>
                 <span className="text-[11px] text-[#a9d2f9] uppercase tracking-wider">
-                  System Online • {activeCoolersCount.toLocaleString()} Assets
+                  {conn.label} • {activeCoolersCount.toLocaleString()} Assets
                 </span>
               </div>
             </div>
@@ -49,7 +61,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
             href="#"
             className="px-3 py-2 rounded-lg text-[13px] text-[#a9d2f9] hover:bg-white/10 hover:text-white transition-colors"
           >
-            Alert Queue (2)
+            Alert Queue ({alertCount})
           </a>
           <a
             href="#"
@@ -89,7 +101,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
           {onSimulateBreach && (
             <button
               onClick={onSimulateBreach}
-              title="Inject live displacement payload from Phone A Beacon simulator"
+              title="Server-side breach simulation for DLTA-BCN-9042 (works without Phone A)"
               className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#ba1a1a] hover:bg-[#93000a] text-white text-[12px] font-bold shadow-sm transition-all"
             >
               <span className="material-symbols-outlined text-[16px] animate-pulse">crisis_alert</span>
@@ -105,9 +117,11 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
 
             <button className="relative p-2 rounded-lg text-[#a9d2f9] hover:bg-white/10 hover:text-white transition-colors">
               <span className="material-symbols-outlined text-[20px]">notifications</span>
-              <span className="absolute top-1 right-1 px-1 min-w-[14px] h-3.5 rounded-full bg-[#ba1a1a] text-white text-[10px] leading-3 flex items-center justify-center font-bold">
-                2
-              </span>
+              {alertCount > 0 && (
+                <span className="absolute top-1 right-1 px-1 min-w-[14px] h-3.5 rounded-full bg-[#ba1a1a] text-white text-[10px] leading-3 flex items-center justify-center font-bold">
+                  {alertCount}
+                </span>
+              )}
             </button>
 
             <div className="h-6 w-px bg-white/20 mx-1"></div>

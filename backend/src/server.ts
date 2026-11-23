@@ -1,12 +1,20 @@
 import os from 'node:os';
 import { createApp } from './app.ts';
 
-const PORT = Number(process.env.PORT ?? 8080);
+const PORT = Number(process.env.PORT ?? 8787);
 const HOST = process.env.HOST ?? '0.0.0.0';
 
 const { server, close } = createApp({
   ingestToken: process.env.INGEST_TOKEN || undefined,
   forceCurfew: process.env.DEMO_FORCE_CURFEW === '1',
+});
+
+server.on('error', (err: NodeJS.ErrnoException) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`Port ${PORT} is already in use by another program. Start with another port, e.g. PORT=8788 npm run dev`);
+    process.exit(1);
+  }
+  throw err;
 });
 
 server.listen(PORT, HOST, () => {

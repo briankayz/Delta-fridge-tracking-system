@@ -176,7 +176,7 @@ export const AiRiskRadarPanel: React.FC<AiRiskRadarPanelProps> = ({
                         isCritical ? 'text-[#ba1a1a]' : 'text-[#735c00]'
                       }`}
                     >
-                      {isCritical ? `${alert.speedKmh} km/h` : '8.2°C'}
+                      {isCritical ? `${alert.speedKmh.toFixed(1)} km/h` : `${alert.tempC.toFixed(1)}°C`}
                     </span>
                   </div>
                   <div className="p-2 rounded bg-[#f2f3ff] text-center border border-[#eaedff]">

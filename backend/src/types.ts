@@ -44,6 +44,7 @@ export interface TrailPoint {
   lng: number;
   speed_kmh: number;
   score: number;
+  battery_pct: number | null;
 }
 
 export interface AssetState extends AssetConfig {

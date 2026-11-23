@@ -1,394 +1,305 @@
-import { useState, useEffect, useCallback } from 'react';
-import { CoolerAsset, RiskAlertItem, LiveBeaconTelemetryPayload } from '../types';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  AssetState,
+  ConnectionState,
+  CoolerAsset,
+  FleetSummary,
+  Incident,
+  RiskAlertItem,
+  ServerEvent,
+} from '../types';
+import { api, WS_URL } from './api';
 
-export const INITIAL_COOLER_FLEET: CoolerAsset[] = [
-  {
-    id: 'DLTA-BCN-8821',
-    coolerModel: 'Commercial Double Door',
-    retailer: 'OK Supermarket (Avondale)',
-    locationName: 'Highfield Res. Zone (+3.4 km)',
-    lat: -17.8641,
-    lng: 31.0024,
-    status: 'critical',
-    statusLabel: 'Geofence Breach',
-    internalTemp: 4.8,
-    powerSource: 'Mains Cut (0V)',
-    batteryPct: 84,
-    lastPing: '5 sec ago',
-    speedKmh: 24.1,
-    riskScore: 94,
-    geofenceRadiusM: 50,
-    displacementM: 3400,
-    routeOrigin: {
-      name: 'OK Supermarket Avondale (Origin)',
-      lat: -17.7942,
-      lng: 31.0378,
-    },
-    isBreached: true,
-    isPowerCut: true,
-    imei: '358920110482910',
-    assetType: 'Double G-Door',
-  },
-  {
-    id: 'DLTA-BCN-4012',
-    coolerModel: 'Single Door Chiller',
-    retailer: 'Chitepo Bottle Store',
-    locationName: 'Harare Central (Avenue)',
-    lat: -17.8182,
-    lng: 31.0489,
-    status: 'warning',
-    statusLabel: 'Outage > 8h',
-    internalTemp: 8.2,
-    powerSource: 'Battery Backup',
-    batteryPct: 61,
-    lastPing: '12 sec ago',
-    speedKmh: 0,
-    riskScore: 68,
-    geofenceRadiusM: 100,
-    displacementM: 12,
-    isBreached: false,
-    isPowerCut: true,
-    imei: '358920110484012',
-    assetType: 'Single Chiller',
-  },
-  {
-    id: 'DLTA-BCN-9402',
-    coolerModel: 'Mega Visual Merchandiser',
-    retailer: 'TM Pick n Pay (Jason Moyo)',
-    locationName: 'Harare CBD Commercial',
-    lat: -17.8285,
-    lng: 31.0522,
-    status: 'nominal',
-    statusLabel: 'Nominal',
-    internalTemp: 3.1,
-    powerSource: '230V AC Mains',
-    batteryPct: 98,
-    lastPing: '18 sec ago',
-    speedKmh: 0,
-    riskScore: 0,
-    geofenceRadiusM: 50,
-    displacementM: 2.1,
-    isBreached: false,
-    isPowerCut: false,
-    imei: '358920110489402',
-    assetType: 'Mega Merchandiser',
-  },
-  {
-    id: 'DLTA-BCN-3109',
-    coolerModel: 'Standard Beverage Cooler',
-    retailer: 'Spar (Borrowdale Village)',
-    locationName: 'Borrowdale Village Forecourt',
-    lat: -17.7538,
-    lng: 31.0852,
-    status: 'nominal',
-    statusLabel: 'Nominal',
-    internalTemp: 3.4,
-    powerSource: '230V AC Mains',
-    batteryPct: 99,
-    lastPing: '25 sec ago',
-    speedKmh: 0,
-    riskScore: 0,
-    geofenceRadiusM: 100,
-    displacementM: 1.8,
-    isBreached: false,
-    isPowerCut: false,
-    imei: '358920110483109',
-    assetType: 'Standard Cooler',
-  },
-  {
-    id: 'DLTA-BCN-1194',
-    coolerModel: 'Compact Countertop Cooler',
-    retailer: 'TotalEnergies Samora Machel',
-    locationName: 'Eastlea Sector Express',
-    lat: -17.8229,
-    lng: 31.0768,
-    status: 'nominal',
-    statusLabel: 'Nominal',
-    internalTemp: 2.9,
-    powerSource: '230V AC Mains',
-    batteryPct: 94,
-    lastPing: '42 sec ago',
-    speedKmh: 0,
-    riskScore: 0,
-    geofenceRadiusM: 50,
-    displacementM: 0.8,
-    isBreached: false,
-    isPowerCut: false,
-    imei: '358920110481194',
-    assetType: 'Countertop Cooler',
-  },
-];
+export const DEMO_BEACON_ID = 'DLTA-BCN-9042';
 
-export const INITIAL_RISK_ALERTS: RiskAlertItem[] = [
-  {
-    id: 'ALERT-01',
-    assetId: 'DLTA-BCN-8821',
-    title: 'Commercial Display Fridge #8821',
-    severity: 'critical',
-    timeAgo: 'T+ 08m ago',
-    description: 'Moved 3.4km outside geofence boundary into unapproved residential sector.',
-    originStore: 'OK Supermarket — Avondale Branch',
-    currentLocation: 'Highfield West Res. (-17.8641, 31.0024)',
-    speedKmh: 24.1,
-    powerStatus: 'BAT 84%',
-    riskPct: 94,
-    timestamp: '23:45 CAT',
-  },
-  {
-    id: 'ALERT-02',
-    assetId: 'DLTA-BCN-4012',
-    title: 'Double Door Chiller #4012',
-    severity: 'warning',
-    timeAgo: 'T+ 2h 15m ago',
-    description: 'Mains cut overnight. Internal temperature rising (8.2°C).',
-    originStore: 'Chitepo Beverage Outlet • Harare Central',
-    currentLocation: 'Harare Central Ave (-17.8182, 31.0489)',
-    speedKmh: 0,
-    powerStatus: '0V (61%)',
-    riskPct: 68,
-    timestamp: '21:30 CAT',
-  },
-  {
-    id: 'ALERT-03',
-    assetId: 'DLTA-BCN-3109',
-    title: 'Fridge #3109 • Geofence Re-entry',
-    severity: 'resolved',
-    timeAgo: 'T+ 14m ago',
-    description: 'Confirmed safe at Spar Borrowdale • T+ 14m ago',
-    originStore: 'Spar Borrowdale Village',
-    currentLocation: 'Borrowdale Village Hub',
-    speedKmh: 0,
-    powerStatus: '230V AC',
-    riskPct: 0,
-    timestamp: '23:35 CAT',
-  },
-];
+// Shown until the first snapshot arrives from the backend.
+const INITIAL_SUMMARY: FleetSummary = { total: 1420, compliant: 1385, outages: 23, anomalies: 12 };
+
+type Toast = { id: number; title: string; description: string; type: 'critical' | 'success' | 'info' };
+
+// ---- formatting helpers ---------------------------------------------------------------
+
+export function timeAgo(iso: string | null, now: number): string {
+  if (!iso) return 'No data';
+  const s = Math.max(0, Math.round((now - Date.parse(iso)) / 1000));
+  if (s < 5) return 'Just now';
+  if (s < 60) return `${s} sec ago`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m} min ago`;
+  const h = Math.floor(m / 60);
+  return `${h}h ${m % 60}m ago`;
+}
+
+export function formatCat(iso: string | null): string {
+  if (!iso) return '—';
+  return (
+    new Date(iso).toLocaleTimeString('en-GB', { timeZone: 'Africa/Harare', hour: '2-digit', minute: '2-digit' }) + ' CAT'
+  );
+}
+
+export function formatDuration(fromIso: string | null, now: number): string {
+  if (!fromIso) return '—';
+  const s = Math.max(0, Math.round((now - Date.parse(fromIso)) / 1000));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  return h > 0 ? `${h}h ${String(m).padStart(2, '0')}m` : `${m}m ${String(sec).padStart(2, '0')}s`;
+}
+
+const shortId = (id: string) => id.split('-').pop() ?? id;
+
+/** Server AssetState -> dashboard view model. */
+export function toCoolerAsset(a: AssetState, now: number): CoolerAsset {
+  const offHours = a.mains_off_since ? (now - Date.parse(a.mains_off_since)) / 3_600_000 : 0;
+  const statusLabel =
+    a.risk.severity === 'critical'
+      ? a.risk.geofenceBreached
+        ? 'Geofence Breach'
+        : 'High Risk'
+      : a.risk.severity === 'warning'
+      ? !a.mains_connected
+        ? `Outage > ${Math.floor(offHours)}h`
+        : 'Warning'
+      : !a.mains_connected
+      ? 'Mains Cut'
+      : 'Nominal';
+
+  return {
+    id: a.id,
+    coolerModel: a.model,
+    retailer: a.retailer_name,
+    locationName: a.location_name,
+    lat: a.lat,
+    lng: a.lng,
+    status: a.risk.severity,
+    statusLabel,
+    internalTemp: a.internal_temp_c ?? 0,
+    powerSource: a.mains_connected ? `${Math.round(a.voltage_ac ?? 230)}V AC Mains` : 'Mains Cut (0V)',
+    batteryPct: a.battery_pct ?? 0,
+    lastPing: timeAgo(a.last_seen, now),
+    lastSeen: a.last_seen,
+    speedKmh: a.speed_kmh,
+    riskScore: a.risk.score,
+    confidencePct: a.risk.confidence,
+    riskReasons: a.risk.reasons,
+    geofenceRadiusM: a.geofence_radius_m,
+    displacementM: a.distance_m,
+    routeOrigin: { name: `${a.retailer_name} (Origin)`, lat: a.anchor.lat, lng: a.anchor.lng },
+    trail: a.trail.map((p) => [p.lat, p.lng] as [number, number]),
+    incidentId: a.incident_id,
+    incidentOpenedAt: a.trail[0]?.t ?? null,
+    isBreached: a.risk.geofenceBreached,
+    isPowerCut: !a.mains_connected,
+    mainsOffSince: a.mains_off_since,
+    simulationActive: a.simulation_active,
+    imei: a.imei,
+    assetType: a.asset_type,
+  };
+}
+
+const SEVERITY_RANK = { critical: 0, warning: 1, nominal: 2 } as const;
+
+function buildAlerts(fleet: CoolerAsset[], incidents: Incident[], now: number): RiskAlertItem[] {
+  const active: RiskAlertItem[] = fleet
+    .filter((c) => c.status !== 'nominal')
+    .map((c) => {
+      const critical = c.status === 'critical';
+      const since = critical ? c.incidentOpenedAt : c.mainsOffSince ?? c.lastSeen;
+      const lead = c.riskReasons[0];
+      return {
+        id: c.incidentId ?? `WARN-${c.id}`,
+        assetId: c.id,
+        title: `${c.coolerModel} #${shortId(c.id)}`,
+        severity: critical ? 'critical' : 'warning',
+        timeAgo: since ? `T+ ${formatDuration(since, now)}` : '',
+        description: critical
+          ? `${lead?.detail ?? 'High theft risk.'} Moving at ${c.speedKmh.toFixed(1)} km/h.`
+          : c.riskReasons.map((r) => r.label).join(' • ') || 'Elevated risk',
+        originStore: c.retailer,
+        currentLocation: `${c.locationName} (${c.lat.toFixed(4)}, ${c.lng.toFixed(4)})`,
+        speedKmh: c.speedKmh,
+        tempC: c.internalTemp,
+        powerStatus: c.isPowerCut ? `BAT ${c.batteryPct}%` : 'AC OK',
+        riskPct: c.riskScore,
+        timestamp: formatCat(since),
+      };
+    });
+  active.sort((a, b) => (a.severity === b.severity ? b.riskPct - a.riskPct : a.severity === 'critical' ? -1 : 1));
+
+  const resolved: RiskAlertItem[] = incidents
+    .filter((i) => i.status === 'resolved')
+    .slice(0, 3)
+    .map((i) => ({
+      id: i.id,
+      assetId: i.asset_id,
+      title: `#${shortId(i.asset_id)} • ${i.resolution === 'authorized' ? 'Authorized move' : i.resolution === 'returned' ? 'Geofence re-entry' : 'Incident closed'}`,
+      severity: 'resolved',
+      timeAgo: timeAgo(i.resolved_at, now),
+      description: `${i.id} closed ${timeAgo(i.resolved_at, now)} • peak risk ${i.peak_score}%`,
+      originStore: i.origin.name,
+      currentLocation: '',
+      speedKmh: 0,
+      tempC: 0,
+      powerStatus: '',
+      riskPct: 0,
+      timestamp: formatCat(i.resolved_at),
+    }));
+
+  return [...active, ...resolved];
+}
+
+// ---- hook -----------------------------------------------------------------------------
 
 export function useTelemetryFeed() {
-  const [fleet, setFleet] = useState<CoolerAsset[]>(INITIAL_COOLER_FLEET);
-  const [alerts, setAlerts] = useState<RiskAlertItem[]>(INITIAL_RISK_ALERTS);
+  const [assets, setAssets] = useState<Record<string, AssetState>>({});
+  const [incidents, setIncidents] = useState<Incident[]>([]);
+  const [summary, setSummary] = useState<FleetSummary>(INITIAL_SUMMARY);
+  const [connection, setConnection] = useState<ConnectionState>('connecting');
   const [flashingRowId, setFlashingRowId] = useState<string | null>(null);
-  const [isConnected, setIsConnected] = useState<boolean>(false);
-  const [toastMessage, setToastMessage] = useState<{
-    id: number;
-    title: string;
-    description: string;
-    type: 'critical' | 'success' | 'info';
-  } | null>(null);
+  const [toastMessage, setToastMessage] = useState<Toast | null>(null);
+  const [inspectRequest, setInspectRequest] = useState<{ id: string; nonce: number } | null>(null);
+  const [now, setNow] = useState(() => Date.now());
+  const flashTimer = useRef<ReturnType<typeof setTimeout>>();
 
-  const [kpiCounts, setKpiCounts] = useState({
-    totalTracked: 1420,
-    activeCompliant: 1385,
-    powerOutages: 23,
-    anomalyAlerts: 12,
-  });
+  // Relative times ("12 sec ago", "T+ 3m 05s") tick once a second.
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
 
-  const triggerToast = useCallback(
-    (title: string, description: string, type: 'critical' | 'success' | 'info' = 'info') => {
-      setToastMessage({ id: Date.now(), title, description, type });
-      setTimeout(() => {
-        setToastMessage((prev) => (prev?.title === title ? null : prev));
-      }, 5000);
-    },
-    []
-  );
+  const triggerToast = useCallback((title: string, description: string, type: Toast['type'] = 'info') => {
+    const id = Date.now();
+    setToastMessage({ id, title, description, type });
+    setTimeout(() => setToastMessage((prev) => (prev?.id === id ? null : prev)), 6000);
+  }, []);
 
-  const handleIncomingPayload = useCallback(
-    (payload: LiveBeaconTelemetryPayload) => {
-      const deviceId = payload.device_id;
-      const isBreached = payload.geofence_breached;
-      const speed = payload.speed_kmh;
-      const risk = payload.risk_score_pct;
+  const dismissToast = useCallback(() => setToastMessage(null), []);
 
-      // Update fleet state
-      setFleet((prevFleet) => {
-        const existingIdx = prevFleet.findIndex((item) => item.id === deviceId);
-        const updatedAsset: CoolerAsset = {
-          id: deviceId,
-          coolerModel: payload.cooler_id ?? 'Industrial Refrig-V4',
-          retailer: payload.retailer_name ?? 'OK Supermarket (Avondale)',
-          locationName: isBreached ? 'Sector 4 Transit (Displaced)' : 'In-Store Nominal Zone',
-          lat: payload.gps?.latitude ?? -17.7812,
-          lng: payload.gps?.longitude ?? 31.0543,
-          status: isBreached ? 'critical' : 'nominal',
-          statusLabel: isBreached ? 'Geofence Breach' : 'Nominal',
-          internalTemp: payload.cold_chain?.internal_temp_c ?? 3.8,
-          powerSource: payload.power?.mains_connected ? '230V AC Mains' : 'Mains Cut (0V)',
-          batteryPct: payload.power?.battery_level_pct ?? 92,
-          lastPing: 'Just now',
-          speedKmh: speed,
-          riskScore: risk,
-          geofenceRadiusM: payload.geofence_radius_m ?? 50,
-          displacementM: payload.displacement_distance_m ?? (isBreached ? 2420 : 3.4),
-          routeOrigin: {
-            name: `${payload.retailer_name ?? 'OK Supermarket Avondale'} (Origin)`,
-            lat: -17.7942,
-            lng: 31.0378,
-          },
-          isBreached,
-          isPowerCut: !payload.power?.mains_connected,
-          imei: payload.imei ?? '864920041289123',
-        };
+  const handleEvent = useCallback(
+    (ev: ServerEvent) => {
+      setSummary(ev.summary);
+      if (ev.type === 'snapshot') {
+        setAssets(Object.fromEntries(ev.assets.map((a) => [a.id, a])));
+        setIncidents(ev.incidents);
+        return;
+      }
+      setAssets((prev) => ({ ...prev, [ev.asset.id]: ev.asset }));
 
-        if (existingIdx >= 0) {
-          const updated = [...prevFleet];
-          updated[existingIdx] = updatedAsset;
-          return updated;
-        } else {
-          return [updatedAsset, ...prevFleet];
-        }
-      });
-
-      // Flashing table row
-      if (isBreached) {
-        setFlashingRowId(deviceId);
-        setTimeout(() => setFlashingRowId(null), 3000);
-
-        // Update KPI Anomaly count
-        setKpiCounts((prev) => ({
-          ...prev,
-          anomalyAlerts: Math.max(13, prev.anomalyAlerts + 1),
-          powerOutages: prev.powerOutages + 1,
-          activeCompliant: prev.activeCompliant - 1,
-        }));
-
-        // Push new alert to AI Risk Radar
-        const newAlert: RiskAlertItem = {
-          id: `ALERT-${Date.now()}`,
-          assetId: deviceId,
-          title: `Sentinel Beacon #${deviceId.split('-').pop()}`,
-          severity: 'critical',
-          timeAgo: 'Just now',
-          description: `UNAUTHORIZED DISPLACEMENT: Moved ${((payload.displacement_distance_m ?? 2420) / 1000).toFixed(1)} km outside geofence boundary at ${speed} km/h.`,
-          originStore: payload.retailer_name ?? 'OK Supermarket Avondale',
-          currentLocation: `Sector 4 Transit (${payload.gps?.latitude.toFixed(4)}, ${payload.gps?.longitude.toFixed(4)})`,
-          speedKmh: speed,
-          powerStatus: 'BAT 92%',
-          riskPct: risk,
-          timestamp: new Date().toLocaleTimeString(),
-        };
-
-        setAlerts((prev) => [newAlert, ...prev.filter((a) => a.assetId !== deviceId)]);
-
+      if (ev.type === 'incident.opened') {
+        setIncidents((prev) => [ev.incident, ...prev.filter((i) => i.id !== ev.incident.id)]);
+        clearTimeout(flashTimer.current);
+        setFlashingRowId(ev.asset.id);
+        flashTimer.current = setTimeout(() => setFlashingRowId(null), 3000);
+        setInspectRequest({ id: ev.asset.id, nonce: Date.now() });
         triggerToast(
-          `CRITICAL BREACH: ${deviceId}`,
-          `Unauthorized movement at ${speed} km/h detected in Sector 4 Transit. Multi-sensor fusion risk: ${risk}%.`,
-          'critical'
+          `CRITICAL BREACH: ${ev.asset.id}`,
+          `${ev.incident.reasons.map((r) => r.label).join(' • ')}. AI risk ${ev.asset.risk.score}% (confidence ${ev.asset.risk.confidence}%).`,
+          'critical',
+        );
+      } else if (ev.type === 'incident.resolved') {
+        setIncidents((prev) => [ev.incident, ...prev.filter((i) => i.id !== ev.incident.id)]);
+        triggerToast(
+          `Incident ${ev.incident.id} resolved`,
+          `${ev.asset.id} is ${ev.incident.resolution === 'authorized' ? 'marked as an authorized move' : 'back inside its geofence'}.`,
+          'success',
         );
       }
     },
-    [triggerToast]
+    [triggerToast],
   );
 
-  // Set up WebSocket & BroadcastChannel
+  // WebSocket with exponential back-off. `disposed` stops reconnects after unmount
+  // (React StrictMode mounts effects twice in development).
   useEffect(() => {
     let ws: WebSocket | null = null;
-    let broadcastChannel: BroadcastChannel | null = null;
+    let disposed = false;
+    let retry: ReturnType<typeof setTimeout> | undefined;
+    let attempt = 0;
 
-    try {
-      broadcastChannel = new BroadcastChannel('delta-telemetry-bus');
-      broadcastChannel.onmessage = (event) => {
-        if (event.data) {
-          handleIncomingPayload(event.data);
+    const connect = () => {
+      if (disposed) return;
+      setConnection('connecting');
+      ws = new WebSocket(WS_URL);
+      ws.onopen = () => {
+        attempt = 0;
+        setConnection('live');
+      };
+      ws.onmessage = (msg) => {
+        try {
+          handleEvent(JSON.parse(msg.data) as ServerEvent);
+        } catch (err) {
+          console.error('Bad telemetry event', err);
         }
       };
-    } catch {
-      // BroadcastChannel unsupported fallback
-    }
-
-    const connectWs = () => {
-      try {
-        ws = new WebSocket('ws://127.0.0.1:8080/ws/telemetry');
-        ws.onopen = () => {
-          setIsConnected(true);
-        };
-        ws.onmessage = (event) => {
-          try {
-            const data = JSON.parse(event.data);
-            handleIncomingPayload(data);
-          } catch {
-            // parse error
-          }
-        };
-        ws.onclose = () => {
-          setIsConnected(false);
-          setTimeout(connectWs, 5000);
-        };
-        ws.onerror = () => {
-          setIsConnected(false);
-        };
-      } catch {
-        setIsConnected(false);
-      }
+      ws.onclose = () => {
+        if (disposed) return;
+        setConnection('offline');
+        const delay = Math.min(10_000, 1000 * 2 ** attempt++);
+        retry = setTimeout(connect, delay);
+      };
+      ws.onerror = () => ws?.close();
     };
 
-    connectWs();
-
-    // Listen to in-window custom events
-    const customListener = (event: Event) => {
-      const customEvt = event as CustomEvent<LiveBeaconTelemetryPayload>;
-      if (customEvt.detail) {
-        handleIncomingPayload(customEvt.detail);
-      }
-    };
-
-    window.addEventListener('delta-telemetry-event', customListener);
-
+    connect();
     return () => {
-      if (ws) ws.close();
-      if (broadcastChannel) broadcastChannel.close();
-      window.removeEventListener('delta-telemetry-event', customListener);
+      disposed = true;
+      clearTimeout(retry);
+      ws?.close();
     };
-  }, [handleIncomingPayload]);
+  }, [handleEvent]);
 
-  // Test simulation helper
-  const simulateTestBreach = () => {
-    const mockBreach: LiveBeaconTelemetryPayload = {
-      device_id: 'DLTA-BCN-9042',
-      cooler_id: 'DLT-COOLER-8821',
-      timestamp: new Date().toISOString(),
-      retailer_id: 'RET-HRE-0419',
-      retailer_name: 'OK Supermarket - Avondale',
-      status: 'BREACH_ALERT',
-      geofence_breached: true,
-      geofence_radius_m: 50,
-      displacement_distance_m: 2420,
-      speed_kmh: 38.5,
-      bearing_deg: 42,
-      bearing_text: 'Bearing 42° NE (Rapid Transit)',
-      risk_score_pct: 94.0,
-      theft_prediction_confidence_pct: 98.4,
-      gps: {
-        latitude: -17.7812,
-        longitude: 31.05431,
-        altitude_m: 1488,
-        accuracy_m: 2.8,
-        satellites: 13,
-      },
-      power: {
-        mains_connected: false,
-        voltage_ac: 0,
-        current_amps: 0.0,
-        battery_level_pct: 92,
-      },
-      cold_chain: {
-        internal_temp_c: 5.6,
-        status: 'Warning',
-      },
-    };
+  const fleet = useMemo(
+    () =>
+      Object.values(assets)
+        .map((a) => toCoolerAsset(a, now))
+        .sort((a, b) => SEVERITY_RANK[a.status] - SEVERITY_RANK[b.status] || b.riskScore - a.riskScore || a.id.localeCompare(b.id)),
+    [assets, now],
+  );
 
-    handleIncomingPayload(mockBreach);
-  };
+  const alerts = useMemo(() => buildAlerts(fleet, incidents, now), [fleet, incidents, now]);
+
+  const simulateBreach = useCallback(
+    async (id: string = DEMO_BEACON_ID) => {
+      try {
+        await api.simulateBreach(id);
+      } catch (err) {
+        triggerToast('Simulation failed', `Backend unreachable or rejected the request: ${(err as Error).message}`, 'critical');
+      }
+    },
+    [triggerToast],
+  );
+
+  const resetAsset = useCallback(
+    async (id: string, resolution: 'authorized' | 'reset' = 'reset') => {
+      try {
+        const res = await api.reset(id, resolution);
+        if (!res.incident) triggerToast('No open incident', `${id} had no open incident to close.`, 'info');
+      } catch (err) {
+        triggerToast('Action failed', (err as Error).message, 'critical');
+      }
+    },
+    [triggerToast],
+  );
 
   return {
     fleet,
     alerts,
-    kpiCounts,
+    incidents,
+    kpiCounts: {
+      totalTracked: summary.total,
+      activeCompliant: summary.compliant,
+      powerOutages: summary.outages,
+      anomalyAlerts: summary.anomalies,
+    },
     flashingRowId,
-    isConnected,
+    connection,
+    isConnected: connection === 'live',
     toastMessage,
     triggerToast,
-    simulateTestBreach,
+    dismissToast,
+    inspectRequest,
+    simulateBreach,
+    resetAsset,
+    now,
   };
 }
-

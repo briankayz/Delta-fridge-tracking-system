@@ -7,6 +7,7 @@ interface FleetMapProps {
   fleet: CoolerAsset[];
   onSelectCooler: (cooler: CoolerAsset) => void;
   selectedCooler?: CoolerAsset | null;
+  summary?: { activeCompliant: number; powerOutages: number; anomalyAlerts: number };
 }
 
 // Custom Leaflet Icons builder
@@ -84,6 +85,19 @@ const createBreachIcon = (speedText: string) => {
   });
 };
 
+// Reuse DivIcon instances: a new icon object on every render makes Leaflet rebuild the
+// marker DOM (restarting the pulse animation) each time telemetry ticks.
+const ICON_CACHE = new Map<string, L.DivIcon>();
+function cachedIcon(key: string, make: () => L.DivIcon): L.DivIcon {
+  let icon = ICON_CACHE.get(key);
+  if (!icon) {
+    icon = make();
+    if (ICON_CACHE.size > 500) ICON_CACHE.clear();
+    ICON_CACHE.set(key, icon);
+  }
+  return icon;
+}
+
 // Keyless basemaps. CARTO basemaps now return an "API KEY REQUIRED" watermark
 // tile for unauthenticated requests, so they must not be used here.
 type MapLayer = 'vector' | 'satellite' | 'heatmap';
@@ -123,12 +137,15 @@ function MapRecenter({ center }: { center: [number, number] }) {
 export const FleetMap: React.FC<FleetMapProps> = ({
   fleet,
   onSelectCooler,
+  summary,
 }) => {
   const [showGeofences, setShowGeofences] = useState(true);
   const [mapLayer, setMapLayer] = useState<MapLayer>('vector');
   const [searchFilter, setSearchFilter] = useState('');
 
-  const criticalCooler = fleet.find((c) => c.status === 'critical');
+  const criticalCoolers = fleet.filter((c) => c.status === 'critical');
+  // Fleet is sorted by severity then risk, so this is the highest-risk active breach.
+  const criticalCooler = criticalCoolers[0];
 
   const filteredFleet = fleet.filter((cooler) => {
     if (!searchFilter) return true;
@@ -211,18 +228,18 @@ export const FleetMap: React.FC<FleetMapProps> = ({
         <div className="flex items-center gap-4 flex-wrap">
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-[#154363]"></span>
-            <span>Compliant (1,385)</span>
+            <span>Compliant ({(summary?.activeCompliant ?? 0).toLocaleString()})</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-[#735c00]"></span>
-            <span>Unplugged / Battery (23)</span>
+            <span>Unplugged / Battery ({summary?.powerOutages ?? 0})</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="relative flex h-2.5 w-2.5">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#ba1a1a] opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#ba1a1a]"></span>
             </span>
-            <span className="text-[#ba1a1a] font-bold">Breach / Displacement (12)</span>
+            <span className="text-[#ba1a1a] font-bold">Breach / Displacement ({summary?.anomalyAlerts ?? 0})</span>
           </div>
         </div>
 
@@ -238,7 +255,8 @@ export const FleetMap: React.FC<FleetMapProps> = ({
       </div>
 
       {/* Map Canvas */}
-      <div className="relative w-full h-[580px] overflow-hidden">
+      {/* `isolate` contains Leaflet's internal z-indexes (400+) so overlays/modals stay on top */}
+      <div className="relative isolate w-full h-[580px] overflow-hidden">
         <MapContainer
           center={HARARE_CENTER}
           zoom={12}
@@ -250,87 +268,55 @@ export const FleetMap: React.FC<FleetMapProps> = ({
           {/* Recenter helper */}
           <MapRecenter center={HARARE_CENTER} />
 
-          {/* Safe Geofence Circles */}
-          {showGeofences && (
-            <>
-              {/* Avondale Safe Geofence */}
-              <Circle
-                center={[-17.7942, 31.0378]}
-                radius={350}
-                pathOptions={{
-                  color: '#315B7C',
-                  fillColor: '#315B7C',
-                  fillOpacity: 0.15,
-                  dashArray: '4,4',
-                  weight: 1.5,
-                }}
-              />
-              {/* Borrowdale Safe Geofence */}
-              <Circle
-                center={[-17.7538, 31.0852]}
-                radius={300}
-                pathOptions={{
-                  color: '#315B7C',
-                  fillColor: '#315B7C',
-                  fillOpacity: 0.15,
-                  dashArray: '4,4',
-                  weight: 1.5,
-                }}
-              />
-              {/* CBD Safe Geofence */}
-              <Circle
-                center={[-17.8285, 31.0522]}
-                radius={400}
-                pathOptions={{
-                  color: '#315B7C',
-                  fillColor: '#315B7C',
-                  fillOpacity: 0.15,
-                  dashArray: '4,4',
-                  weight: 1.5,
-                }}
-              />
-              {/* Breach Zone Area (Highfield West / Sector 4) */}
-              {criticalCooler && (
-                <Circle
-                  center={[criticalCooler.lat, criticalCooler.lng]}
-                  radius={450}
-                  pathOptions={{
-                    color: '#ba1a1a',
-                    fillColor: '#ba1a1a',
-                    fillOpacity: 0.15,
-                    dashArray: '6,4',
-                    weight: 2,
-                  }}
-                />
-              )}
-            </>
-          )}
+          {/* Per-asset geofences, drawn at true radius around each store anchor */}
+          {showGeofences &&
+            filteredFleet.map(
+              (cooler) =>
+                cooler.routeOrigin && (
+                  <Circle
+                    key={`fence-${cooler.id}`}
+                    center={[cooler.routeOrigin.lat, cooler.routeOrigin.lng]}
+                    radius={cooler.geofenceRadiusM}
+                    pathOptions={{
+                      color: cooler.status === 'critical' ? '#ba1a1a' : '#315B7C',
+                      fillColor: cooler.status === 'critical' ? '#ba1a1a' : '#315B7C',
+                      fillOpacity: 0.15,
+                      dashArray: '4,4',
+                      weight: 1.5,
+                    }}
+                  />
+                )
+            )}
 
-          {/* Displacement Vector Line from Origin to Breach Position */}
-          {showGeofences && criticalCooler && criticalCooler.routeOrigin && (
-            <Polyline
-              positions={[
-                [criticalCooler.routeOrigin.lat, criticalCooler.routeOrigin.lng],
-                [criticalCooler.lat, criticalCooler.lng],
-              ]}
-              pathOptions={{
-                color: '#ba1a1a',
-                weight: 3,
-                dashArray: '6,6',
-              }}
-            />
-          )}
+          {/* Breach trails: anchor -> every reported fix since the incident opened */}
+          {criticalCoolers.map((cooler) => {
+            const path: [number, number][] =
+              cooler.trail.length > 1
+                ? cooler.trail
+                : cooler.routeOrigin
+                ? [[cooler.routeOrigin.lat, cooler.routeOrigin.lng], [cooler.lat, cooler.lng]]
+                : [];
+            return path.length > 1 ? (
+              <Polyline
+                key={`trail-${cooler.id}`}
+                positions={path}
+                pathOptions={{ color: '#ba1a1a', weight: 3, dashArray: '6,6' }}
+              />
+            ) : null;
+          })}
 
           {/* Render Fleet Markers */}
           {filteredFleet.map((cooler) => {
             let icon: L.DivIcon;
             if (cooler.status === 'critical') {
-              icon = createBreachIcon(`${cooler.speedKmh.toFixed(1)} km/h`);
+              icon = cachedIcon(`breach:${cooler.speedKmh.toFixed(1)}`, () =>
+                createBreachIcon(`${cooler.speedKmh.toFixed(1)} km/h`)
+              );
             } else if (cooler.status === 'warning') {
-              icon = createWarningIcon();
+              icon = cachedIcon('warning', createWarningIcon);
             } else {
               const count = cooler.id === 'DLTA-BCN-9402' ? 42 : cooler.id === 'DLTA-BCN-3109' ? 12 : 18;
-              icon = createClusterIcon(count);
+              icon = cachedIcon(`cluster:${count}`, () => createClusterIcon(count));
             }
 
             return (

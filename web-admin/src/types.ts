@@ -1,3 +1,5 @@
+// ---- UI view models -------------------------------------------------------------------
+
 export interface CoolerAsset {
   id: string;
   coolerModel: string;
@@ -11,8 +13,11 @@ export interface CoolerAsset {
   powerSource: string;
   batteryPct: number;
   lastPing: string;
+  lastSeen: string | null;
   speedKmh: number;
   riskScore: number;
+  confidencePct: number;
+  riskReasons: RiskReason[];
   geofenceRadiusM: number;
   displacementM: number;
   routeOrigin?: {
@@ -20,8 +25,13 @@ export interface CoolerAsset {
     lat: number;
     lng: number;
   };
+  trail: [number, number][];
+  incidentId: string | null;
+  incidentOpenedAt: string | null;
   isBreached: boolean;
   isPowerCut: boolean;
+  mainsOffSince: string | null;
+  simulationActive: boolean;
   imei?: string;
   assetType?: string;
 }
@@ -36,44 +46,93 @@ export interface RiskAlertItem {
   originStore: string;
   currentLocation: string;
   speedKmh: number;
+  tempC: number;
   powerStatus: string;
   riskPct: number;
   timestamp: string;
 }
 
-export interface LiveBeaconTelemetryPayload {
-  device_id: string;
-  cooler_id?: string;
-  timestamp: string;
-  retailer_id?: string;
-  retailer_name?: string;
-  firmware_version?: string;
-  imei?: string;
-  status?: string;
-  geofence_breached: boolean;
-  geofence_radius_m?: number;
-  displacement_distance_m?: number;
-  speed_kmh: number;
-  bearing_deg?: number;
-  bearing_text?: string;
-  risk_score_pct: number;
-  theft_prediction_confidence_pct?: number;
-  gps?: {
-    latitude: number;
-    longitude: number;
-    altitude_m?: number;
-    accuracy_m?: number;
-    satellites?: number;
-  };
-  power?: {
-    mains_connected: boolean;
-    voltage_ac: number;
-    current_amps: number;
-    battery_level_pct: number;
-  };
-  cold_chain?: {
-    internal_temp_c: number;
-    status?: string;
-  };
+// ---- Backend contract (mirrors backend/src/types.ts) ---------------------------------
+
+export type Severity = 'nominal' | 'warning' | 'critical';
+
+export interface RiskReason {
+  code: string;
+  label: string;
+  detail: string;
+  points: number;
 }
 
+export interface RiskResult {
+  score: number;
+  severity: Severity;
+  confidence: number;
+  geofenceBreached: boolean;
+  reasons: RiskReason[];
+}
+
+export interface TrailPoint {
+  t: string;
+  lat: number;
+  lng: number;
+  speed_kmh: number;
+  score: number;
+  battery_pct: number | null;
+}
+
+export interface AssetState {
+  id: string;
+  cooler_id: string;
+  model: string;
+  asset_type: string;
+  imei: string;
+  retailer_id: string;
+  retailer_name: string;
+  anchor: { lat: number; lng: number };
+  geofence_radius_m: number;
+  shift: { open_hour: number; close_hour: number };
+  location_name: string;
+  lat: number;
+  lng: number;
+  speed_kmh: number;
+  bearing_deg: number;
+  distance_m: number;
+  internal_temp_c: number | null;
+  mains_connected: boolean;
+  mains_off_since: string | null;
+  voltage_ac: number | null;
+  battery_pct: number | null;
+  device_status: string | null;
+  last_seen: string | null;
+  risk: RiskResult;
+  incident_id: string | null;
+  trail: TrailPoint[];
+  simulation_active: boolean;
+}
+
+export interface Incident {
+  id: string;
+  asset_id: string;
+  status: 'open' | 'resolved';
+  opened_at: string;
+  resolved_at: string | null;
+  resolution: 'returned' | 'authorized' | 'reset' | null;
+  peak_score: number;
+  reasons: RiskReason[];
+  origin: { lat: number; lng: number; name: string };
+}
+
+export interface FleetSummary {
+  total: number;
+  compliant: number;
+  outages: number;
+  anomalies: number;
+}
+
+export type ServerEvent =
+  | { type: 'snapshot'; summary: FleetSummary; assets: AssetState[]; incidents: Incident[] }
+  | { type: 'asset.updated'; summary: FleetSummary; asset: AssetState }
+  | { type: 'incident.opened'; summary: FleetSummary; asset: AssetState; incident: Incident }
+  | { type: 'incident.resolved'; summary: FleetSummary; asset: AssetState; incident: Incident };
+
+export type ConnectionState = 'connecting' | 'live' | 'offline';

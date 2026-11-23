@@ -9,7 +9,7 @@ import { AssetConfig, AssetState, FleetSummary, Incident, ServerEvent, TrailPoin
 /** Consecutive calm payloads (inside fence, ~stationary) needed to auto-resolve an incident. */
 export const RESOLVE_AFTER_CALM = 3;
 const MAX_TRAIL = 300;
-const MAX_HISTORY = 200;
+const MAX_HISTORY = 2000; // ~2.7 h at 5 s cadence
 const MAX_CLOSED_INCIDENTS = 50;
 
 export interface FleetBaseline {
@@ -217,7 +217,7 @@ export class FleetStore {
       ? `Near ${nearestPlace(asset.lat, asset.lng)} (+${(asset.distance_m / 1000).toFixed(1)} km)`
       : `${asset.retailer_name} (in store)`;
 
-    const point: TrailPoint = { t: nowIso, lat: asset.lat, lng: asset.lng, speed_kmh: asset.speed_kmh, score: asset.risk.score };
+    const point: TrailPoint = { t: nowIso, lat: asset.lat, lng: asset.lng, speed_kmh: asset.speed_kmh, score: asset.risk.score, battery_pct: asset.battery_pct };
     const hist = this.history.get(asset.id) ?? [];
     hist.push(point);
     if (hist.length > MAX_HISTORY) hist.shift();
@@ -275,8 +275,8 @@ export class FleetStore {
     this.incidents.push(incident);
     asset.incident_id = incident.id;
     asset.trail = [
-      { t: nowIso, lat: asset.anchor.lat, lng: asset.anchor.lng, speed_kmh: 0, score: 0 },
-      { t: nowIso, lat: asset.lat, lng: asset.lng, speed_kmh: asset.speed_kmh, score: asset.risk.score },
+      { t: nowIso, lat: asset.anchor.lat, lng: asset.anchor.lng, speed_kmh: 0, score: 0, battery_pct: asset.battery_pct },
+      { t: nowIso, lat: asset.lat, lng: asset.lng, speed_kmh: asset.speed_kmh, score: asset.risk.score, battery_pct: asset.battery_pct },
     ];
     this.calmCount.set(asset.id, 0);
     return incident;
