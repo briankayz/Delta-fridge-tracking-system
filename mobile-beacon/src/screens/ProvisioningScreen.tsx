@@ -7,6 +7,8 @@ import {
   TouchableOpacity,
   Modal,
   ActivityIndicator,
+  Alert,
+  Switch,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -22,6 +24,10 @@ export const ProvisioningScreen: React.FC = () => {
     commitProvisioning,
     isProvisioningInProgress,
     setCurrentScreen,
+    selectRetailer,
+    useRealGps,
+    setUseRealGps,
+    link,
   } = useBeacon();
 
   const [isRetailerModalOpen, setIsRetailerModalOpen] = useState(false);
@@ -35,7 +41,14 @@ export const ProvisioningScreen: React.FC = () => {
   };
 
   const handleArmBeacon = async () => {
-    await commitProvisioning();
+    const ok = await commitProvisioning();
+    if (!ok) {
+      Alert.alert(
+        'Provisioning failed',
+        `Could not register ${deviceId} with the Delta backend at ${link.apiBase}. Check the laptop is on the same Wi-Fi and the backend is running.`
+      );
+      return;
+    }
     setIsLockedSuccess(true);
     setTimeout(() => {
       setIsLockedSuccess(false);
@@ -138,6 +151,30 @@ export const ProvisioningScreen: React.FC = () => {
               </View>
               <MaterialIcons name="expand-more" size={22} color={THEME.colors.outline} />
             </TouchableOpacity>
+          </View>
+
+          {/* Location source: surveyed store anchor (demo default) or the phone's live GNSS fix */}
+          <View style={styles.fieldGroup}>
+            <Text style={styles.fieldLabel}>GEOFENCE ANCHOR SOURCE</Text>
+            <View style={styles.retailerSelectorBox}>
+              <View style={{ flex: 1, paddingRight: 12 }}>
+                <Text style={styles.retailerNameText}>{useRealGps ? 'Live phone GPS' : 'Store anchor (surveyed)'}</Text>
+                <Text style={styles.siteZoneText}>
+                  {useRealGps
+                    ? 'Anchors to this phone’s current fix. Provision on-site.'
+                    : `${retailer.anchor_lat.toFixed(5)}, ${retailer.anchor_lon.toFixed(5)}`}
+                </Text>
+              </View>
+              <Switch
+                value={useRealGps}
+                onValueChange={setUseRealGps}
+                trackColor={{ false: THEME.colors.outline, true: THEME.colors.primaryContainer }}
+                thumbColor={useRealGps ? THEME.colors.primary : THEME.colors.onSurface}
+              />
+            </View>
+            <Text style={[styles.siteZoneText, { marginTop: 6, color: link.connected ? THEME.colors.primary : THEME.colors.criticalRed }]}>
+              Backend {link.connected ? 'connected' : 'unreachable'} • {link.apiBase}
+            </Text>
           </View>
 
           {/* Geofence Radius Slider Box */}
@@ -420,6 +457,7 @@ export const ProvisioningScreen: React.FC = () => {
                     item.id === retailer.id && styles.modalRetailerRowSelected,
                   ]}
                   onPress={() => {
+                    selectRetailer(item);
                     setIsRetailerModalOpen(false);
                   }}
                 >

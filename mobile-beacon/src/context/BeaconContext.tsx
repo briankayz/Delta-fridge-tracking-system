@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { FridgeTelemetryPayload, RetailerProfile } from '../types/telemetry';
+import { FridgeTelemetryPayload, LinkStatus, RetailerProfile, ServerAssessment } from '../types/telemetry';
 import { telemetryStream } from '../services/telemetryStream';
 import { DEFAULT_RETAILER, DEVICE_METADATA } from '../services/sensorEngine';
 
@@ -12,15 +12,22 @@ interface BeaconContextType {
   geofenceRadius: number;
   isProvisioned: boolean;
   isProvisioningInProgress: boolean;
+  provisioningError: string | null;
   isDisplaced: boolean;
   isLockdownActive: boolean;
   isMuted: boolean;
+  useRealGps: boolean;
   telemetry: FridgeTelemetryPayload;
+  /** Latest backend risk verdict; null while the backend is unreachable. */
+  assessment: ServerAssessment | null;
+  link: LinkStatus;
   countdown: number;
   lastPayloadLabel: string;
   payloadCount: number;
   setGeofenceRadius: (radius: number) => void;
-  commitProvisioning: () => Promise<void>;
+  selectRetailer: (retailer: RetailerProfile) => void;
+  setUseRealGps: (enabled: boolean) => void;
+  commitProvisioning: () => Promise<boolean>;
   simulateDisplacement: () => void;
   resetDisplacement: () => void;
   toggleLockdown: () => void;
@@ -69,43 +76,55 @@ export const BeaconProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const [geofenceRadius, setGeofenceRadiusState] = useState<number>(50);
   const [isProvisioned, setIsProvisioned] = useState<boolean>(true);
   const [isProvisioningInProgress, setIsProvisioningInProgress] = useState<boolean>(false);
+  const [provisioningError, setProvisioningError] = useState<string | null>(null);
   const [isDisplaced, setIsDisplaced] = useState<boolean>(false);
   const [isLockdownActive, setIsLockdownActive] = useState<boolean>(false);
   const [isMuted, setIsMuted] = useState<boolean>(false);
-  const [countdown, setCountdown] = useState<number>(8);
-  const [lastPayloadLabel, setLastPayloadLabel] = useState<string>('2s ago');
-  const [payloadCount, setPayloadCount] = useState<number>(1);
-
-  const [telemetry, setTelemetry] = useState<FridgeTelemetryPayload>(() => {
-    return telemetryStream.broadcastCurrentState();
+  const [useRealGps, setUseRealGpsState] = useState<boolean>(telemetryStream.getUseRealGps());
+  const [countdown, setCountdown] = useState<number>(5);
+  const [lastPayloadLabel, setLastPayloadLabel] = useState<string>('—');
+  const [payloadCount, setPayloadCount] = useState<number>(0);
+  const [assessment, setAssessment] = useState<ServerAssessment | null>(null);
+  const [link, setLink] = useState<LinkStatus>({
+    connected: false,
+    apiBase: telemetryStream.getApiBase(),
+    lastSyncTime: null,
+    lastError: null,
+    payloadCount: 0,
+    cadenceSeconds: 5,
   });
 
+  const [telemetry, setTelemetry] = useState<FridgeTelemetryPayload>(
+    () => telemetryStream.getLastPayload() ?? telemetryStream.broadcastCurrentState()
+  );
+
   useEffect(() => {
+    let labelTimer: ReturnType<typeof setTimeout> | undefined;
     const unsubTelemetry = telemetryStream.subscribeTelemetry((newPayload) => {
       setTelemetry(newPayload);
       setLastPayloadLabel('Just now');
-      setTimeout(() => {
-        setLastPayloadLabel('2s ago');
-      }, 2000);
+      clearTimeout(labelTimer);
+      labelTimer = setTimeout(() => setLastPayloadLabel('2s ago'), 2000);
+      setCountdown(telemetryStream.getIsDisplaced() ? 1 : 5);
     });
 
     const unsubStatus = telemetryStream.subscribeStatus((status) => {
       setPayloadCount(status.payloadCount);
+      setLink(status);
     });
 
+    const unsubAssessment = telemetryStream.subscribeAssessment(setAssessment);
+
     const timer = setInterval(() => {
-      setCountdown((prev) => {
-        if (prev <= 1) {
-          return telemetryStream.getIsDisplaced() ? 1 : 10;
-        }
-        return prev - 1;
-      });
+      setCountdown((prev) => (prev > 1 ? prev - 1 : prev));
     }, 1000);
 
     return () => {
       unsubTelemetry();
       unsubStatus();
+      unsubAssessment();
       clearInterval(timer);
+      clearTimeout(labelTimer);
     };
   }, []);
 
@@ -114,13 +133,29 @@ export const BeaconProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     telemetryStream.setGeofenceRadius(radius);
   };
 
-  const commitProvisioning = async () => {
+  const selectRetailer = (next: RetailerProfile) => {
+    setRetailer(next);
+    telemetryStream.setRetailer(next);
+  };
+
+  const setUseRealGps = (enabled: boolean) => {
+    setUseRealGpsState(enabled);
+    telemetryStream.setUseRealGps(enabled);
+  };
+
+  const commitProvisioning = async (): Promise<boolean> => {
     setIsProvisioningInProgress(true);
-    await new Promise((resolve) => setTimeout(resolve, 1600));
-    setIsProvisioned(true);
+    setProvisioningError(null);
+    const result = await telemetryStream.provision();
     setIsProvisioningInProgress(false);
+    if (!result.ok) {
+      setProvisioningError(result.error ?? 'Provisioning failed');
+      return false;
+    }
+    setIsProvisioned(true);
     setCurrentScreen('active');
     setActiveTab('telemetry');
+    return true;
   };
 
   const simulateDisplacement = () => {
@@ -155,14 +190,20 @@ export const BeaconProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         geofenceRadius,
         isProvisioned,
         isProvisioningInProgress,
+        provisioningError,
         isDisplaced,
         isLockdownActive,
         isMuted,
+        useRealGps,
         telemetry,
+        assessment,
+        link,
         countdown,
         lastPayloadLabel,
         payloadCount,
         setGeofenceRadius,
+        selectRetailer,
+        setUseRealGps,
         commitProvisioning,
         simulateDisplacement,
         resetDisplacement,
@@ -184,4 +225,3 @@ export const useBeacon = () => {
   }
   return context;
 };
-

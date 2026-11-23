@@ -25,13 +25,28 @@ export const EmergencyBreachScreen: React.FC = () => {
     isLockdownActive,
     toggleLockdown,
     setCurrentScreen,
+    assessment,
+    link,
   } = useBeacon();
+
+  // Backend verdict when reachable, else the on-device estimate carried in the payload.
+  const confidence = assessment?.theft_prediction_confidence_pct ?? telemetry.theft_prediction_confidence_pct;
+  const riskPct = assessment?.risk_score_pct ?? telemetry.risk_score_pct;
+  const reason = (code: string) => assessment?.reasons.find((r) => r.code === code);
+  const displacementM = assessment?.displacement_distance_m ?? telemetry.displacement_distance_m;
+  const geofenceChip = reason('GEOFENCE_BREACH')
+    ? `+${reason('GEOFENCE_BREACH')!.points} pts`
+    : telemetry.geofence_breached
+    ? 'Breached'
+    : 'Inside';
+  const curfewChip = reason('CURFEW_MOTION') ? 'After hours' : reason('MOTION') ? 'Trading hrs' : '—';
+  const mainsChip = reason('MAINS_CUT_IN_TRANSIT') ? 'Cut in transit' : telemetry.power.mains_connected ? 'Connected' : 'Cut';
 
   const [pinModalVisible, setPinModalVisible] = useState(false);
   const [pinCode, setPinCode] = useState('');
   const [isLockingDown, setIsLockingDown] = useState(false);
   const [sirenActive, setSirenActive] = useState(false);
-  const [elapsedSeconds, setElapsedSeconds] = useState(194); // T+ 03m 14s
+  const [elapsedSeconds, setElapsedSeconds] = useState(0); // since this breach screen opened
 
   // Red alert flashing glow animation
   const glowAnim = useRef(new Animated.Value(0.4)).current;
@@ -161,6 +176,12 @@ export const EmergencyBreachScreen: React.FC = () => {
               <Text style={styles.incidentSubtext}>
                 NODE: <Text style={styles.whiteHighlightText}>{deviceId}</Text> • ASSET:{' '}
                 <Text style={styles.goldHighlightText}>Industrial Refrig-V4</Text>
+                {'\n'}
+                {assessment?.incident_id
+                  ? `HQ INCIDENT ${assessment.incident_id} • RISK ${riskPct}%`
+                  : link.connected
+                  ? 'HQ notified • awaiting incident ID'
+                  : 'HQ UNREACHABLE • on-device estimate'}
               </Text>
             </View>
           </View>
@@ -185,7 +206,7 @@ export const EmergencyBreachScreen: React.FC = () => {
                 <MaterialIcons name="sync" size={13} color={THEME.colors.onErrorContainer} />
                 <Text style={styles.motionBadgeText}>SUSTAINED MOTION</Text>
               </View>
-              <Text style={styles.bearingText}>Bearing 42° NE (Rapid Transit)</Text>
+              <Text style={styles.bearingText}>{telemetry.bearing_text}</Text>
             </View>
           </View>
 
@@ -196,29 +217,29 @@ export const EmergencyBreachScreen: React.FC = () => {
                 <MaterialIcons name="psychology" size={16} color={THEME.colors.secondary} />
                 <Text style={styles.confidenceTitle}>THEFT PREDICTION CONFIDENCE</Text>
               </View>
-              <Text style={styles.confidenceScore}>98.4% MATCH</Text>
+              <Text style={styles.confidenceScore}>{confidence.toFixed(1)}% MATCH</Text>
             </View>
 
             {/* Red Progress Track */}
             <View style={styles.confidenceTrackBg}>
-              <View style={[styles.confidenceTrackFill, { width: '98.4%' }]} />
+              <View style={[styles.confidenceTrackFill, { width: `${Math.min(100, confidence)}%` }]} />
             </View>
 
-            {/* 3 Breakdown Chips */}
+            {/* 3 Breakdown Chips (from the backend's reasoning) */}
             <View style={styles.breakdownRow}>
               <View style={styles.breakdownChip}>
                 <Text style={styles.breakdownLabel}>Geofence</Text>
-                <Text style={styles.breakdownValueRed}>100% Breached</Text>
+                <Text style={styles.breakdownValueRed}>{geofenceChip}</Text>
               </View>
 
               <View style={styles.breakdownChip}>
                 <Text style={styles.breakdownLabel}>Curfew Time</Text>
-                <Text style={styles.breakdownValueGold}>96% Anomaly</Text>
+                <Text style={styles.breakdownValueGold}>{curfewChip}</Text>
               </View>
 
               <View style={styles.breakdownChip}>
                 <Text style={styles.breakdownLabel}>Mains Power</Text>
-                <Text style={styles.breakdownValueRed}>99% Cut</Text>
+                <Text style={styles.breakdownValueRed}>{mainsChip}</Text>
               </View>
             </View>
           </View>
@@ -232,8 +253,8 @@ export const EmergencyBreachScreen: React.FC = () => {
                 <MaterialIcons name="fence" size={16} color={THEME.colors.criticalRed} />
               </View>
               <View>
-                <Text style={styles.diagBoxValueRed}>+2.42 km</Text>
-                <Text style={styles.diagBoxSub}>Anchor: OK Avondale</Text>
+                <Text style={styles.diagBoxValueRed}>+{(displacementM / 1000).toFixed(2)} km</Text>
+                <Text style={styles.diagBoxSub} numberOfLines={1}>Anchor: {retailer.name}</Text>
               </View>
             </View>
 
@@ -245,7 +266,9 @@ export const EmergencyBreachScreen: React.FC = () => {
               </View>
               <View>
                 <Text style={styles.diagBoxValueGold}>DISCONNECTED</Text>
-                <Text style={styles.diagBoxSub}>Li-ion: 92% (14h rem.)</Text>
+                <Text style={styles.diagBoxSub}>
+                  Li-ion: {telemetry.power.battery_level_pct}% ({telemetry.power.backup_duration_hours}h rem.)
+                </Text>
               </View>
             </View>
           </View>

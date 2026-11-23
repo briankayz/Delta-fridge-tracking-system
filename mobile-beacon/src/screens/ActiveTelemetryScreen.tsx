@@ -24,7 +24,23 @@ export const ActiveTelemetryScreen: React.FC = () => {
     lastPayloadLabel,
     simulateDisplacement,
     setCurrentScreen,
+    assessment,
+    link,
   } = useBeacon();
+
+  // Backend verdict when reachable; otherwise the beacon's own estimate, clearly labelled.
+  const riskPct = assessment?.risk_score_pct ?? telemetry.risk_score_pct;
+  const riskLabel = assessment
+    ? assessment.severity === 'critical'
+      ? 'Critical'
+      : assessment.severity === 'warning'
+      ? 'Warning'
+      : 'Nominal / Safe'
+    : 'on-device estimate';
+  const outsideFence = assessment?.geofence_breached ?? telemetry.geofence_breached;
+  const driftM = assessment?.displacement_distance_m ?? telemetry.displacement_distance_m;
+  const driftPct = Math.min(100, Math.round((driftM / Math.max(1, geofenceRadius)) * 100));
+  const hemi = (v: number, pos: string, neg: string) => `${Math.abs(v).toFixed(5)}° ${v < 0 ? neg : pos}`;
 
   // Radar sweep animation
   const spinValue = useRef(new Animated.Value(0)).current;
@@ -175,12 +191,18 @@ export const ActiveTelemetryScreen: React.FC = () => {
           {/* Status Headline */}
           <View style={styles.statusBadge}>
             <View style={styles.cyanPulseDot} />
-            <Text style={styles.statusBadgeText}>STATUS: SECURE & TRANSMITTING</Text>
+            <Text style={styles.statusBadgeText}>
+              {link.connected ? 'STATUS: SECURE & TRANSMITTING' : 'STATUS: SECURE • BACKEND OFFLINE'}
+            </Text>
           </View>
 
           <View style={styles.heartbeatRow}>
-            <Text style={styles.heartbeatDot}>●</Text>
-            <Text style={styles.heartbeatText}>Heartbeat Live (10s telemetry cadence)</Text>
+            <Text style={[styles.heartbeatDot, !link.connected && { color: THEME.colors.criticalRed }]}>●</Text>
+            <Text style={styles.heartbeatText} numberOfLines={1}>
+              {link.connected
+                ? `Heartbeat Live (${link.cadenceSeconds}s cadence) • ${link.apiBase.replace(/^https?:\/\//, '')}`
+                : `Retrying ${link.apiBase.replace(/^https?:\/\//, '')}`}
+            </Text>
           </View>
 
           {/* Digital Telemetry Counters */}
@@ -201,7 +223,9 @@ export const ActiveTelemetryScreen: React.FC = () => {
               <MaterialIcons name="verified-user" size={16} color={THEME.colors.secondary} />
               <Text style={styles.aiRiskLabel}>AI Displacement Risk</Text>
             </View>
-            <Text style={styles.aiRiskValue}>0.0% (Nominal / Safe)</Text>
+            <Text style={styles.aiRiskValue}>
+              {riskPct.toFixed(1)}% ({riskLabel})
+            </Text>
           </View>
         </View>
 
@@ -220,7 +244,9 @@ export const ActiveTelemetryScreen: React.FC = () => {
                 </View>
               </View>
               <View style={styles.geofenceInsideBadge}>
-                <Text style={styles.geofenceInsideText}>GEOFENCE: INSIDE</Text>
+                <Text style={[styles.geofenceInsideText, outsideFence && { color: THEME.colors.criticalRed }]}>
+                  GEOFENCE: {outsideFence ? 'OUTSIDE' : 'INSIDE'}
+                </Text>
               </View>
             </View>
 
@@ -229,8 +255,8 @@ export const ActiveTelemetryScreen: React.FC = () => {
               <View style={styles.gpsMetricBox}>
                 <Text style={styles.microLabel}>Coordinates</Text>
                 <Text style={styles.monoValue}>
-                  {telemetry.gps.latitude.toFixed(5)}° S{'\n'}
-                  {telemetry.gps.longitude.toFixed(5)}° E
+                  {hemi(telemetry.gps.latitude, 'N', 'S')}{'\n'}
+                  {hemi(telemetry.gps.longitude, 'E', 'W')}
                 </Text>
               </View>
 
@@ -251,17 +277,25 @@ export const ActiveTelemetryScreen: React.FC = () => {
               <View>
                 <Text style={styles.microLabel}>CURRENT VELOCITY</Text>
                 <View style={styles.speedInlineGroup}>
-                  <Text style={styles.speedLargeText}>0.0</Text>
+                  <Text style={styles.speedLargeText}>{telemetry.speed_kmh.toFixed(1)}</Text>
                   <Text style={styles.speedUnitText}>km/h</Text>
-                  <Text style={styles.speedTagText}>STATIONARY</Text>
+                  <Text style={styles.speedTagText}>{telemetry.speed_kmh < 1 ? 'STATIONARY' : 'MOVING'}</Text>
                 </View>
               </View>
 
               <View style={styles.driftContainer}>
                 <Text style={styles.microLabel}>Anchor Drift</Text>
-                <Text style={styles.driftValueText}>3.4m / {geofenceRadius}.0m</Text>
+                <Text style={styles.driftValueText}>
+                  {driftM.toFixed(1)}m / {geofenceRadius}.0m
+                </Text>
                 <View style={styles.driftProgressBar}>
-                  <View style={[styles.driftProgressFill, { width: '7%' }]} />
+                  <View
+                    style={[
+                      styles.driftProgressFill,
+                      { width: `${Math.max(2, driftPct)}%` },
+                      driftPct >= 100 && { backgroundColor: THEME.colors.criticalRed },
+                    ]}
+                  />
                 </View>
               </View>
             </View>
@@ -421,7 +455,7 @@ export const ActiveTelemetryScreen: React.FC = () => {
               <View style={styles.simulateTextCol}>
                 <Text style={styles.simulateTitle}>SIMULATE DISPLACEMENT EVENT</Text>
                 <Text style={styles.simulateSubtitle}>
-                  Triggers instantaneous siren & 1-min emergency burst
+                  Unplugs & moves the cooler; streams 1-sec breach telemetry to HQ
                 </Text>
               </View>
             </View>

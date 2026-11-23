@@ -2,6 +2,20 @@ import * as Location from 'expo-location';
 import { Accelerometer } from 'expo-sensors';
 import * as Battery from 'expo-battery';
 import { GpsLocation, Mpu6050Reading, PowerState, ColdChainState, FridgeTelemetryPayload, RetailerProfile } from '../types/telemetry';
+import { destinationPoint, haversineM } from './geo';
+
+// Simulated theft trajectory: leaves the store on bearing 42° (NE) at ~38.5 km/h,
+// starting 2.4 km out so the very first breach payload is clearly outside the fence.
+export const DISPLACEMENT_BEARING_DEG = 42;
+const DISPLACEMENT_START_M = 2400;
+const DISPLACEMENT_SPEED_KMH = 38.5;
+
+export interface PayloadOptions {
+  /** Seconds since the displacement simulation started (moves the position along the route). */
+  displacedSeconds?: number;
+  /** Report the phone's real GNSS fix instead of the store anchor (needs provisioning on-site). */
+  useRealGps?: boolean;
+}
 
 export const DEFAULT_RETAILER: RetailerProfile = {
   id: 'RET-HRE-0419',
@@ -131,14 +145,28 @@ class SensorEngine {
     };
   }
 
-  public getGpsReading(isDisplaced = false): GpsLocation {
+  /** Latest real GNSS fix, if location permission was granted and a fix has arrived. */
+  public getRealFix(): { latitude: number; longitude: number } | null {
+    if (!this.hasPhysicalLocation || !this.realLocation) return null;
+    return { latitude: this.realLocation.coords.latitude, longitude: this.realLocation.coords.longitude };
+  }
+
+  public getGpsReading(
+    isDisplaced = false,
+    retailer: RetailerProfile = DEFAULT_RETAILER,
+    opts: PayloadOptions = {}
+  ): GpsLocation {
     if (isDisplaced) {
-      // Displaced coordinates along trajectory in Sector 4 Transit
-      const latJitter = (Math.random() * 0.0003 - 0.00015);
-      const lonJitter = (Math.random() * 0.0003 - 0.00015);
+      // Move along the theft route relative to the store anchor (or the real fix when live GPS is on).
+      const origin = (opts.useRealGps && this.getRealFix()) || {
+        latitude: retailer.anchor_lat,
+        longitude: retailer.anchor_lon,
+      };
+      const travelled = DISPLACEMENT_START_M + ((opts.displacedSeconds ?? 0) * DISPLACEMENT_SPEED_KMH * 1000) / 3600;
+      const pos = destinationPoint(origin.latitude, origin.longitude, DISPLACEMENT_BEARING_DEG, travelled);
       return {
-        latitude: parseFloat((-17.78120 + latJitter).toFixed(5)),
-        longitude: parseFloat((31.05431 + lonJitter).toFixed(5)),
+        latitude: parseFloat(pos.lat.toFixed(6)),
+        longitude: parseFloat(pos.lng.toFixed(6)),
         altitude_m: 1488,
         accuracy_m: 2.8,
         satellites: 13,
@@ -147,7 +175,7 @@ class SensorEngine {
       };
     }
 
-    if (this.hasPhysicalLocation && this.realLocation) {
+    if (opts.useRealGps && this.hasPhysicalLocation && this.realLocation) {
       return {
         latitude: parseFloat(this.realLocation.coords.latitude.toFixed(5)),
         longitude: parseFloat(this.realLocation.coords.longitude.toFixed(5)),
@@ -159,9 +187,9 @@ class SensorEngine {
       };
     }
 
-    // Default Avondale Harare Coordinates
-    const microLat = (-17.79421 + (Math.random() * 0.00004 - 0.00002)).toFixed(5);
-    const microLon = (31.03784 + (Math.random() * 0.00004 - 0.00002)).toFixed(5);
+    // Store anchor with ~2 m of GNSS jitter
+    const microLat = (retailer.anchor_lat + (Math.random() * 0.00004 - 0.00002)).toFixed(6);
+    const microLon = (retailer.anchor_lon + (Math.random() * 0.00004 - 0.00002)).toFixed(6);
     return {
       latitude: parseFloat(microLat),
       longitude: parseFloat(microLon),
@@ -225,15 +253,20 @@ class SensorEngine {
   public getPayload(
     isDisplaced: boolean,
     geofenceRadiusM = 50,
-    retailer: RetailerProfile = DEFAULT_RETAILER
+    retailer: RetailerProfile = DEFAULT_RETAILER,
+    opts: PayloadOptions = {},
+    anchor: { latitude: number; longitude: number } = { latitude: retailer.anchor_lat, longitude: retailer.anchor_lon }
   ): FridgeTelemetryPayload {
-    const gps = this.getGpsReading(isDisplaced);
+    const gps = this.getGpsReading(isDisplaced, retailer, opts);
     const accel = this.getAccelerometerReading(isDisplaced);
     const power = this.getPowerReading(isDisplaced);
     const coldChain = this.getColdChainReading(isDisplaced);
+    // Distance from the provisioned anchor. The backend recomputes this and owns the risk score;
+    // the risk fields below are only an on-device estimate shown when the backend is unreachable.
+    const displacement = parseFloat(haversineM(anchor.latitude, anchor.longitude, gps.latitude, gps.longitude).toFixed(1));
 
     if (isDisplaced) {
-      const speed = parseFloat((38.5 + (Math.random() * 1.6 - 0.8)).toFixed(1));
+      const speed = parseFloat((DISPLACEMENT_SPEED_KMH + (Math.random() * 1.6 - 0.8)).toFixed(1));
       return {
         device_id: DEVICE_METADATA.deviceId,
         cooler_id: DEVICE_METADATA.coolerId,
@@ -245,11 +278,11 @@ class SensorEngine {
         status: 'BREACH_ALERT',
         geofence_breached: true,
         geofence_radius_m: geofenceRadiusM,
-        displacement_distance_m: 2420,
+        displacement_distance_m: displacement,
         speed_kmh: speed,
-        bearing_deg: 42,
-        bearing_text: 'Bearing 42° NE (Rapid Transit)',
-        risk_score_pct: 94.0,
+        bearing_deg: DISPLACEMENT_BEARING_DEG,
+        bearing_text: `Bearing ${DISPLACEMENT_BEARING_DEG}° NE (Rapid Transit)`,
+        risk_score_pct: 94.0, // on-device estimate; backend score replaces it when reachable
         theft_prediction_confidence_pct: 98.4,
         gps,
         accelerometer: accel,
@@ -270,9 +303,9 @@ class SensorEngine {
       firmware_version: DEVICE_METADATA.firmwareVersion,
       imei: DEVICE_METADATA.imei,
       status: 'SECURE_TRANSMITTING',
-      geofence_breached: false,
+      geofence_breached: displacement > geofenceRadiusM,
       geofence_radius_m: geofenceRadiusM,
-      displacement_distance_m: 3.4,
+      displacement_distance_m: displacement,
       speed_kmh: 0.0,
       bearing_deg: 0,
       bearing_text: 'Stationary / In-Store Anchor',

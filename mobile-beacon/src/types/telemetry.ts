@@ -45,6 +45,34 @@ export interface RetailerProfile {
   anchor_lon: number;
 }
 
+/** Risk verdict returned by POST /api/v1/telemetry. The backend is the authority on risk. */
+export interface RiskReason {
+  code: string;
+  label: string;
+  detail: string;
+  points: number;
+}
+
+export interface ServerAssessment {
+  risk_score_pct: number;
+  theft_prediction_confidence_pct: number;
+  severity: 'nominal' | 'warning' | 'critical';
+  geofence_breached: boolean;
+  displacement_distance_m: number;
+  reasons: RiskReason[];
+  incident_id: string | null;
+  received_at: string;
+}
+
+export interface LinkStatus {
+  connected: boolean;
+  apiBase: string;
+  lastSyncTime: Date | null;
+  lastError: string | null;
+  payloadCount: number;
+  cadenceSeconds: number;
+}
+
 export interface FridgeTelemetryPayload {
   device_id: string;
   cooler_id: string;
