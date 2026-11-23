@@ -84,12 +84,39 @@ const createBreachIcon = (speedText: string) => {
   });
 };
 
-// Map center controller helper
+// Keyless basemaps. CARTO basemaps now return an "API KEY REQUIRED" watermark
+// tile for unauthenticated requests, so they must not be used here.
+type MapLayer = 'vector' | 'satellite' | 'heatmap';
+const TILE_LAYERS: Record<MapLayer, { url: string; attribution: string; maxZoom: number }> = {
+  vector: {
+    url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+    attribution:
+      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    maxZoom: 19,
+  },
+  satellite: {
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    attribution: 'Tiles &copy; Esri &mdash; Esri, Maxar, Earthstar Geographics',
+    maxZoom: 19,
+  },
+  heatmap: {
+    // Muted light-gray canvas so red breach pins stand out
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+    attribution: 'Tiles &copy; Esri &mdash; Esri, HERE, Garmin, &copy; OpenStreetMap contributors',
+    maxZoom: 16,
+  },
+};
+
+// Default Harare Metro coordinates (module scope: a stable reference)
+const HARARE_CENTER: [number, number] = [-17.82485, 31.05303];
+
+// Map center controller helper — only re-centres when the coordinates actually change
 function MapRecenter({ center }: { center: [number, number] }) {
   const map = useMap();
+  const [lat, lng] = center;
   useEffect(() => {
-    map.flyTo(center, 12, { duration: 1.2 });
-  }, [center, map]);
+    map.flyTo([lat, lng], 12, { duration: 1.2 });
+  }, [lat, lng, map]);
   return null;
 }
 
@@ -98,11 +125,8 @@ export const FleetMap: React.FC<FleetMapProps> = ({
   onSelectCooler,
 }) => {
   const [showGeofences, setShowGeofences] = useState(true);
-  const [mapLayer, setMapLayer] = useState<'vector' | 'satellite' | 'heatmap'>('vector');
+  const [mapLayer, setMapLayer] = useState<MapLayer>('vector');
   const [searchFilter, setSearchFilter] = useState('');
-
-  // Default Harare Metro Coordinates
-  const harareCenter: [number, number] = [-17.82485, 31.05303];
 
   const criticalCooler = fleet.find((c) => c.status === 'critical');
 
@@ -216,25 +240,15 @@ export const FleetMap: React.FC<FleetMapProps> = ({
       {/* Map Canvas */}
       <div className="relative w-full h-[580px] overflow-hidden">
         <MapContainer
-          center={harareCenter}
+          center={HARARE_CENTER}
           zoom={12}
           scrollWheelZoom={true}
           style={{ width: '100%', height: '100%' }}
         >
-          {mapLayer === 'satellite' ? (
-            <TileLayer
-              attribution='&copy; <a href="https://www.esri.com/">Esri</a>'
-              url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-            />
-          ) : (
-            <TileLayer
-              attribution='&copy; <a href="https://carto.com/">CARTO</a>'
-              url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
-            />
-          )}
+          <TileLayer key={mapLayer} {...TILE_LAYERS[mapLayer]} />
 
           {/* Recenter helper */}
-          <MapRecenter center={harareCenter} />
+          <MapRecenter center={HARARE_CENTER} />
 
           {/* Safe Geofence Circles */}
           {showGeofences && (
