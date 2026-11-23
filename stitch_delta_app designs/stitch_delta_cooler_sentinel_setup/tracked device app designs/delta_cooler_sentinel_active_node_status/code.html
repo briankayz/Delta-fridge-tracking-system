@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/><meta content="mobile_tab" name="shell-type"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{width:100vw;margin:0;padding:0;}body{overscroll-behavior:none;}.pb-safe{padding-bottom:env(safe-area-inset-bottom,0px);}.pt-safe{padding-top:env(safe-area-inset-top,0px);}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { "colors": { "tertiary-container": "#da7716", "surface-container-highest": "#2d3449", "inverse-primary": "#0062a1", "on-surface": "#dae2fd", "on-error": "#690005", "primary-container": "#2995eb", "on-tertiary-fixed-variant": "#703800", "on-secondary-container": "#342800", "tertiary": "#ffb781", "background": "#0b1326", "on-surface-variant": "#bfc7d3", "tertiary-fixed": "#ffdcc4", "secondary-container": "#af8d11", "inverse-on-surface": "#283044", "surface": "#0b1326", "outline": "#8a919d", "on-error-container": "#ffdad6", "surface-bright": "#31394d", "error": "#ffb4ab", "primary-fixed": "#d0e4ff", "surface-container-high": "#222a3d", "on-tertiary-container": "#442000", "error-container": "#93000a", "surface-container-lowest": "#060e20", "primary": "#9ccaff", "inverse-surface": "#dae2fd", "on-primary-container": "#002b4c", "surface-container": "#171f33", "on-tertiary-fixed": "#2f1400", "secondary-fixed": "#ffe088", "on-tertiary": "#4e2500", "on-primary": "#003257", "outline-variant": "#404752", "on-secondary-fixed-variant": "#574500", "on-primary-fixed-variant": "#00497b", "on-secondary-fixed": "#241a00", "primary-fixed-dim": "#9ccaff", "tertiary-fixed-dim": "#ffb781", "on-primary-fixed": "#001d35", "surface-variant": "#2d3449", "surface-tint": "#9ccaff", "on-secondary": "#3c2f00", "secondary-fixed-dim": "#e9c349", "secondary": "#e9c349", "surface-dim": "#0b1326", "on-background": "#dae2fd", "surface-container-low": "#131b2e" }, "borderRadius": { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" }, "spacing": { "space-md": "1rem", "gutter-tablet": "1.25rem", "margin-tablet": "1.5rem", "space-lg": "1.5rem", "space-xs": "0.25rem", "margin": "1rem", "space-xl": "2rem", "gutter": "1rem", "space-sm": "0.5rem" }, "fontFamily": { "headline-lg": ["Inter"], "display-lg-mobile": ["Inter"], "headline-md": ["Inter"], "label-md": ["Inter"], "display-lg": ["Inter"], "label-xs": ["Inter"], "body-sm": ["Inter"], "body-md": ["Inter"], "title-sm": ["Inter"], "body-lg": ["Inter"] }, "fontSize": { "headline-lg": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}], "display-lg-mobile": ["26px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "700"}], "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}], "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.04em", "fontWeight": "600"}], "display-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}], "label-xs": ["10px", {"lineHeight": "14px", "letterSpacing": "0.06em", "fontWeight": "700"}], "body-sm": ["12px", {"lineHeight": "16px", "fontWeight": "400"}], "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}], "title-sm": ["16px", {"lineHeight": "24px", "fontWeight": "600"}], "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}] } } } }</script><style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head><body class="bg-surface font-body-md text-on-surface antialiased flex flex-col min-h-screen"><header class="fixed top-0 w-full z-50 pt-safe bg-surface-container-lowest/80 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.25)]"><div class="h-16 px-margin flex items-center justify-between"><div class="flex items-center gap-space-sm"><div class="w-9 h-9 rounded-lg bg-surface-container-high flex items-center justify-center"><span class="material-symbols-outlined text-primary text-[20px]">sensors</span></div><div class="flex flex-col"><span class="font-label-xs text-label-xs uppercase tracking-wider text-outline">DELTA ASSET GUARD</span><h1 class="font-title-sm text-title-sm text-on-surface leading-tight tracking-tight">Beacon Scanner</h1></div></div><div class="flex items-center gap-space-sm"><div class="flex items-center gap-space-xs bg-surface-container-high px-space-sm py-space-xs rounded-full"><span class="w-2 h-2 rounded-full bg-secondary animate-pulse"></span><span class="font-label-xs text-label-xs text-secondary uppercase">BLE RDY</span></div><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></div></header><main class="flex flex-col relative w-full px-margin pt-16 pb-24 bg-surface min-h-screen"><div class="flex flex-col w-full pb-6 space-y-space-md">
+<!-- Node Identification Strip -->
+<div class="bg-surface-container-low rounded-xl p-space-sm shadow-sm space-y-space-xs">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-space-xs">
+<span class="w-1.5 h-1.5 rounded-full bg-primary animate-ping"></span>
+<span class="font-label-xs text-label-xs text-on-surface uppercase tracking-wider font-semibold">NODE ID: DLTA-BCN-9042</span>
+</div>
+<div class="flex items-center gap-space-xs text-on-surface-variant font-label-xs text-label-xs">
+<span>FW v2.4.1</span>
+<span>•</span>
+<span class="text-primary flex items-center gap-0.5">
+<span class="material-symbols-outlined text-[13px]">battery_charging_full</span>98%
+        </span>
+</div>
+</div>
+<div class="flex items-center justify-between pt-1">
+<div class="flex items-center gap-space-xs min-w-0">
+<span class="material-symbols-outlined text-secondary text-[15px] shrink-0">storefront</span>
+<span class="font-label-md text-label-md text-on-surface truncate">OK Supermarket - Avondale Branch</span>
+</div>
+<span class="bg-surface-container-high text-on-surface-variant px-1.5 py-0.5 rounded font-label-xs text-label-xs tracking-wider shrink-0">
+        RET-HRE-0419
+      </span>
+</div>
+</div>
+<!-- Primary Surveillance Status & Radar Hub -->
+<div class="bg-surface-container-low rounded-xl p-space-md shadow-md flex flex-col items-center text-center relative overflow-hidden">
+<!-- Ambient back-glow -->
+<div class="absolute -top-12 left-1/2 -translate-x-1/2 w-48 h-48 bg-primary/10 rounded-full blur-3xl pointer-events-none"></div>
+<!-- Pulsing Radar / Concentric Rings -->
+<div class="relative w-36 h-36 flex items-center justify-center my-space-xs">
+<div class="absolute inset-0 rounded-full bg-primary/5 animate-ping opacity-60"></div>
+<div class="absolute inset-2 rounded-full bg-surface-container-high/60"></div>
+<div class="absolute inset-4 rounded-full bg-surface-container-highest/80"></div>
+<!-- Rotating sweep segment via SVG -->
+<svg class="absolute inset-0 w-full h-full animate-[spin_4s_linear_infinite]" viewbox="0 0 100 100">
+<circle class="text-primary/20" cx="50" cy="50" fill="none" r="46" stroke="currentColor" stroke-dasharray="4 6" stroke-width="1.5"></circle>
+<path d="M 50 50 L 50 4 A 46 46 0 0 1 85 20 Z" fill="url(#radarSweep)" opacity="0.45"></path>
+<defs>
+<lineargradient id="radarSweep" x1="0%" x2="100%" y1="0%" y2="100%">
+<stop offset="0%" stop-color="#9ccaff" stop-opacity="0.8"></stop>
+<stop offset="100%" stop-color="#9ccaff" stop-opacity="0"></stop>
+</lineargradient>
+</defs>
+</svg>
+<!-- Center Lock / Node Badge -->
+<div class="relative z-10 w-14 h-14 rounded-full bg-surface-container-lowest flex flex-col items-center justify-center shadow-inner">
+<span class="material-symbols-outlined text-primary text-[26px]">animated_images</span>
+</div>
+</div>
+<!-- Status Headline -->
+<div class="mt-space-xs">
+<div class="inline-flex items-center gap-1.5 px-space-sm py-0.5 rounded-full bg-surface-container-highest text-primary font-label-md text-label-md tracking-wide">
+<span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+        STATUS: SECURE &amp; TRANSMITTING
+      </div>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-space-xs flex items-center gap-1">
+<span class="text-primary font-bold">●</span> Heartbeat Live (10s telemetry cadence)
+    </p>
+<!-- Digital Telemetry Counters -->
+<div class="grid grid-cols-2 gap-space-sm w-full mt-space-md pt-space-sm bg-surface-container/60 rounded-lg p-space-sm">
+<div class="flex flex-col items-start text-left">
+<span class="font-label-xs text-label-xs text-outline uppercase tracking-wider">Last Payload</span>
+<span class="font-title-sm text-title-sm text-on-surface font-semibold tracking-tight" id="payload-timestamp">2s ago</span>
+</div>
+<div class="flex flex-col items-end text-right">
+<span class="font-label-xs text-label-xs text-outline uppercase tracking-wider">Next Sync</span>
+<span class="font-title-sm text-title-sm text-primary font-semibold font-mono tracking-tight" id="countdown-timer">00:08</span>
+</div>
+</div>
+<!-- Sentinel AI Risk Evaluation Ribbon -->
+<div class="w-full mt-space-xs flex items-center justify-between px-space-sm py-1.5 bg-surface-container-high rounded-md">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-secondary text-[16px]">verified_user</span>
+<span class="font-label-xs text-label-xs text-on-surface-variant font-medium">AI Displacement Risk</span>
+</div>
+<span class="font-label-xs text-label-xs text-primary font-bold tracking-wide">0.0% (Nominal / Safe)</span>
+</div>
+</div>
+<!-- Live Data Feed Section -->
+<div class="space-y-space-md">
+<!-- Card 1: GPS Geofence Telemetry -->
+<div class="bg-surface-container-low rounded-xl p-space-md shadow-sm space-y-space-sm">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-space-xs">
+<div class="w-7 h-7 rounded bg-surface-container-high flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-[18px]">satellite_alt</span>
+</div>
+<div>
+<h2 class="font-title-sm text-title-sm text-on-surface font-semibold leading-tight">GPS Telemetry</h2>
+<span class="font-label-xs text-label-xs text-outline tracking-wider">GNSS DUAL-BAND L1 / L5</span>
+</div>
+</div>
+<span class="bg-surface-container-high text-primary px-2 py-0.5 rounded font-label-xs text-label-xs font-semibold">
+          GEOFENCE: INSIDE
+        </span>
+</div>
+<!-- Real-time metrics grid -->
+<div class="grid grid-cols-2 gap-space-xs pt-1">
+<div class="bg-surface-container p-space-xs rounded-lg">
+<span class="font-label-xs text-label-xs text-outline block">Coordinates</span>
+<span class="font-body-sm text-body-sm font-semibold text-on-surface font-mono tracking-tight block">
+            -17.79421° S<br/>31.03784° E
+          </span>
+</div>
+<div class="bg-surface-container p-space-xs rounded-lg flex flex-col justify-between">
+<div>
+<span class="font-label-xs text-label-xs text-outline block">Lock State</span>
+<span class="font-body-sm text-body-sm font-semibold text-on-surface">14 Sats (HDOP 0.7)</span>
+</div>
+<div>
+<span class="font-label-xs text-label-xs text-outline block">Elevation</span>
+<span class="font-label-xs text-label-xs text-on-surface-variant font-mono">1,492m ASL</span>
+</div>
+</div>
+</div>
+<!-- Displacement Bar & Speed Metric -->
+<div class="bg-surface-container p-space-sm rounded-lg flex items-center justify-between">
+<div>
+<span class="font-label-xs text-label-xs text-outline uppercase block">Current Velocity</span>
+<div class="flex items-baseline gap-1">
+<span class="font-display-lg-mobile text-display-lg-mobile font-bold text-on-surface tracking-tight">0.0</span>
+<span class="font-label-xs text-label-xs text-on-surface-variant">km/h</span>
+<span class="font-label-xs text-label-xs text-primary ml-1 font-semibold">STATIONARY</span>
+</div>
+</div>
+<div class="w-1/2 flex flex-col items-end">
+<span class="font-label-xs text-label-xs text-outline block">Anchor Drift</span>
+<span class="font-label-md text-label-md text-on-surface font-mono font-semibold">3.4m / 50.0m</span>
+<!-- Micro Progress Rail -->
+<div class="w-full bg-surface-container-highest h-1.5 rounded-full mt-1 overflow-hidden">
+<div class="bg-primary h-full rounded-full" style="width: 7%;"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Card 2: 3-Axis Accelerometer (MPU-6050) -->
+<div class="bg-surface-container-low rounded-xl p-space-md shadow-sm space-y-space-sm">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-space-xs">
+<div class="w-7 h-7 rounded bg-surface-container-high flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-[18px]">screen_rotation</span>
+</div>
+<div>
+<h2 class="font-title-sm text-title-sm text-on-surface font-semibold leading-tight">Inertial Sentinel</h2>
+<span class="font-label-xs text-label-xs text-outline tracking-wider">MPU-6050 3-AXIS ACCEL</span>
+</div>
+</div>
+<span class="bg-surface-container-high text-primary px-2 py-0.5 rounded font-label-xs text-label-xs font-semibold">
+          STABLE
+        </span>
+</div>
+<!-- Tri-Axis Real-Time Waveforms -->
+<div class="space-y-space-xs pt-1">
+<!-- X Axis -->
+<div class="bg-surface-container p-2 rounded-lg flex items-center justify-between">
+<div class="w-16">
+<span class="font-label-xs text-label-xs text-outline block">X-AXIS</span>
+<span class="font-label-md text-label-md text-on-surface font-mono font-bold">+0.002g</span>
+</div>
+<svg class="h-6 w-36 text-primary" fill="none" viewbox="0 0 144 24">
+<path d="M0,12 L30,12 L35,10 L40,14 L45,12 L80,12 L85,11 L90,13 L95,12 L144,12" stroke="currentColor" stroke-linecap="round" stroke-width="1.5"></path>
+</svg>
+<span class="font-label-xs text-label-xs text-outline">REST</span>
+</div>
+<!-- Y Axis -->
+<div class="bg-surface-container p-2 rounded-lg flex items-center justify-between">
+<div class="w-16">
+<span class="font-label-xs text-label-xs text-outline block">Y-AXIS</span>
+<span class="font-label-md text-label-md text-on-surface font-mono font-bold">-0.001g</span>
+</div>
+<svg class="h-6 w-36 text-primary" fill="none" viewbox="0 0 144 24">
+<path d="M0,12 L20,12 L25,13 L30,11 L35,12 L90,12 L95,13 L100,11 L105,12 L144,12" stroke="currentColor" stroke-linecap="round" stroke-width="1.5"></path>
+</svg>
+<span class="font-label-xs text-label-xs text-outline">REST</span>
+</div>
+<!-- Z Axis (Gravity Vector) -->
+<div class="bg-surface-container p-2 rounded-lg flex items-center justify-between">
+<div class="w-16">
+<span class="font-label-xs text-label-xs text-outline block">Z-AXIS</span>
+<span class="font-label-md text-label-md text-secondary font-mono font-bold">0.998g</span>
+</div>
+<svg class="h-6 w-36 text-secondary" fill="none" viewbox="0 0 144 24">
+<path d="M0,12 L15,12 L20,9 L25,15 L30,12 L60,12 L65,10 L70,14 L75,12 L144,12" stroke="currentColor" stroke-linecap="round" stroke-width="1.5"></path>
+</svg>
+<span class="font-label-xs text-label-xs text-secondary font-semibold">1G VEC</span>
+</div>
+</div>
+<!-- Vibration Diagnostics Footnote -->
+<div class="flex items-center justify-between pt-1 text-on-surface-variant font-label-xs text-label-xs">
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">vibration</span>
+          RMS: 0.004 mm/s
+        </span>
+<span class="text-outline">Compressor Harmonic: Nominal</span>
+</div>
+</div>
+<!-- Card 3: AC Mains & Cooling System Monitor -->
+<div class="bg-surface-container-low rounded-xl p-space-md shadow-sm space-y-space-sm">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-space-xs">
+<div class="w-7 h-7 rounded bg-surface-container-high flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-[18px]">mode_fan</span>
+</div>
+<div>
+<h2 class="font-title-sm text-title-sm text-on-surface font-semibold leading-tight">Cold Chain &amp; Grid</h2>
+<span class="font-label-xs text-label-xs text-outline tracking-wider">AC MONITOR &amp; NTC PROBE</span>
+</div>
+</div>
+<span class="bg-surface-container-high text-primary px-2 py-0.5 rounded font-label-xs text-label-xs font-semibold">
+          AC ONLINE
+        </span>
+</div>
+<!-- Primary Cold Chain Metrics -->
+<div class="grid grid-cols-2 gap-space-xs pt-1">
+<!-- Internal Temp -->
+<div class="bg-surface-container p-space-sm rounded-lg flex flex-col justify-between">
+<span class="font-label-xs text-label-xs text-outline">Internal Chamber Probe</span>
+<div class="my-1">
+<span class="font-display-lg-mobile text-display-lg-mobile font-bold text-on-surface tracking-tight">3.8°C</span>
+</div>
+<span class="font-label-xs text-label-xs text-primary font-semibold">Optimal (2.0° - 6.0°)</span>
+</div>
+<!-- Current Draw -->
+<div class="bg-surface-container p-space-sm rounded-lg flex flex-col justify-between">
+<span class="font-label-xs text-label-xs text-outline">Compressor Load</span>
+<div class="my-1">
+<span class="font-display-lg-mobile text-display-lg-mobile font-bold text-secondary tracking-tight">1.42A</span>
+</div>
+<span class="font-label-xs text-label-xs text-on-surface-variant font-mono">234.2V AC / 50.1Hz</span>
+</div>
+</div>
+<!-- Tamper Status Bar -->
+<div class="bg-surface-container p-space-sm rounded-lg flex items-center justify-between">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-primary text-[18px]">lock</span>
+<span class="font-label-md text-label-md text-on-surface">Magnetic Chassis Bracket</span>
+</div>
+<span class="font-label-xs text-label-xs font-bold text-primary uppercase">Armed &amp; Sealed</span>
+</div>
+</div>
+</div>
+<!-- Bottom Control Actions & Testing Rig -->
+<div class="space-y-space-sm pt-space-xs">
+<!-- Simulation Test Trigger Button -->
+<button class="w-full bg-secondary/10 hover:bg-secondary/20 active:bg-secondary/30 text-secondary p-space-sm rounded-lg flex items-center justify-between transition-colors shadow-sm text-left" id="simulate-btn">
+<div class="flex items-center gap-space-sm">
+<div class="w-8 h-8 rounded-full bg-secondary-container flex items-center justify-center text-on-secondary-container shrink-0">
+<span class="material-symbols-outlined text-[18px]">notification_important</span>
+</div>
+<div class="flex flex-col">
+<span class="font-label-md text-label-md font-bold tracking-wide uppercase">Simulate Displacement Event</span>
+<span class="font-label-xs text-label-xs text-on-surface-variant opacity-80">Triggers instantaneous siren &amp; 1-min emergency burst</span>
+</div>
+</div>
+<span class="material-symbols-outlined text-[20px] shrink-0 text-secondary">sensors_off</span>
+</button>
+<!-- Node Maintenance PIN Lock Button -->
+<button class="w-full bg-surface-container hover:bg-surface-container-high active:bg-surface-container-highest text-outline hover:text-on-surface py-2.5 px-space-sm rounded-lg flex items-center justify-center gap-space-xs transition-colors">
+<span class="material-symbols-outlined text-[16px]">key</span>
+<span class="font-label-md text-label-md">Deactivate Sentinel Node (Technician PIN Required)</span>
+</button>
+</div>
+</div>
+<script>
+  (function initSentinelTelemetry() {
+    let countdown = 8;
+    const countdownEl = document.getElementById('countdown-timer');
+    const timestampEl = document.getElementById('payload-timestamp');
+    const simulateBtn = document.getElementById('simulate-btn');
+
+    // Heartbeat clock simulation
+    setInterval(() => {
+      countdown--;
+      if (countdown <= 0) {
+        countdown = 10;
+        if (timestampEl) {
+          timestampEl.textContent = 'Just now';
+          timestampEl.classList.add('text-primary');
+          setTimeout(() => {
+            timestampEl.classList.remove('text-primary');
+            timestampEl.textContent = '2s ago';
+          }, 2000);
+        }
+      }
+      if (countdownEl) {
+        countdownEl.textContent = '00:0' + countdown;
+      }
+    }, 1000);
+
+    // Interactive Test Simulation feedback
+    if (simulateBtn) {
+      simulateBtn.addEventListener('click', () => {
+        simulateBtn.classList.add('bg-secondary/40');
+        const originalText = simulateBtn.querySelector('.font-label-md').textContent;
+        simulateBtn.querySelector('.font-label-md').textContent = 'DISPLACEMENT ALARM SIMULATED (BURST SENT)';
+        setTimeout(() => {
+          simulateBtn.classList.remove('bg-secondary/40');
+          simulateBtn.querySelector('.font-label-md').textContent = originalText;
+        }, 2200);
+      });
+    }
+  })();
+</script></main><nav class="fixed bottom-0 w-full z-50 pb-safe bg-surface-container-lowest/90 backdrop-blur-xl shadow-[0_-1px_12px_rgba(0,0,0,0.35)]" data-active-classes="text-primary font-bold"><div class="flex justify-around items-center h-16 px-space-xs"><a class="flex flex-col items-center justify-center min-w-[54px] min-h-[44px] text-on-surface-variant hover:text-on-surface transition-colors" data-path="beacon-scanner" href="#"><span class="material-symbols-outlined text-[22px]">radar</span><span class="font-label-xs text-label-xs mt-0.5">Scan</span></a><a class="flex flex-col items-center justify-center min-w-[54px] min-h-[44px] text-on-surface-variant hover:text-on-surface transition-colors" data-path="provision-queue" href="#"><span class="material-symbols-outlined text-[22px]">checklist</span><span class="font-label-xs text-label-xs mt-0.5">Queue</span></a><a class="flex flex-col items-center justify-center min-w-[54px] min-h-[44px] text-on-surface-variant hover:text-on-surface transition-colors" data-path="fleet-telemetry" href="#"><span class="material-symbols-outlined text-[22px]">query_stats</span><span class="font-label-xs text-label-xs mt-0.5">Telemetry</span></a><a class="flex flex-col items-center justify-center min-w-[54px] min-h-[44px] text-on-surface-variant hover:text-on-surface transition-colors" data-path="device-lock-vault" href="#"><span class="material-symbols-outlined text-[22px]">vpn_key</span><span class="font-label-xs text-label-xs mt-0.5">Security</span></a></div></nav></body></html>

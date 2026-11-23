@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+
+<html lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><meta content="web_standard" name="shell-type"/><title>Delta Beverage Cooler Tracker</title><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base { html, body { margin: 0; padding: 0; } body { overscroll-behavior: none; } main > :first-child { margin-top: 0 !important; } main > :last-child { margin-bottom: 0 !important; } } ::-webkit-scrollbar { display: none; }</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { "colors": { "tertiary": "#735c00", "surface-container-high": "#e2e7ff", "on-secondary-fixed": "#001d35", "inverse-on-surface": "#eef0ff", "surface-container": "#eaedff", "inverse-surface": "#283044", "on-secondary": "#ffffff", "on-background": "#131b2e", "on-tertiary-container": "#4f3e00", "primary-container": "#315b7c", "secondary-fixed": "#d0e4ff", "tertiary-fixed-dim": "#e9c349", "on-secondary-fixed-variant": "#00497b", "secondary": "#0062a1", "outline-variant": "#c2c7ce", "inverse-primary": "#a2cbf1", "tertiary-fixed": "#ffe088", "primary": "#154363", "on-surface": "#131b2e", "on-error": "#ffffff", "on-error-container": "#93000a", "on-secondary-container": "#003c65", "surface-variant": "#dae2fd", "surface": "#faf8ff", "surface-container-lowest": "#ffffff", "error": "#ba1a1a", "on-primary-container": "#a9d2f9", "surface-bright": "#faf8ff", "tertiary-container": "#cca830", "error-container": "#ffdad6", "on-surface-variant": "#42474d", "surface-tint": "#396283", "surface-container-low": "#f2f3ff", "surface-container-highest": "#dae2fd", "on-tertiary-fixed": "#241a00", "secondary-container": "#47a8ff", "on-primary-fixed-variant": "#1e4a6a", "on-tertiary": "#ffffff", "outline": "#72787e", "secondary-fixed-dim": "#9ccaff", "surface-dim": "#d2d9f4", "primary-fixed-dim": "#a2cbf1", "on-tertiary-fixed-variant": "#574500", "primary-fixed": "#cce5ff", "background": "#faf8ff", "on-primary": "#ffffff", "on-primary-fixed": "#001d31" }, "borderRadius": { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" }, "spacing": { "space-lg": "1.5rem", "space-xl": "2rem", "space-md": "1rem", "space-xs": "0.25rem", "margin-mobile": "1rem", "gutter-mobile": "1rem", "gutter": "1.5rem", "space-sm": "0.5rem", "margin": "2rem" }, "fontFamily": { "headline-sm": ["Inter"], "headline-lg": ["Inter"], "headline-md": ["Inter"], "data-metric": ["Inter"], "label-sm": ["Inter"], "body-lg": ["Inter"], "display-lg": ["Inter"], "body-sm": ["Inter"], "display-lg-mobile": ["Inter"], "label-lg": ["Inter"], "label-md": ["Inter"], "body-md": ["Inter"] }, "fontSize": { "headline-sm": ["16px", { "lineHeight": "24px", "letterSpacing": "-0.005em", "fontWeight": "600" }], "headline-lg": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.015em", "fontWeight": "600" }], "headline-md": ["20px", { "lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "600" }], "data-metric": ["28px", { "lineHeight": "34px", "letterSpacing": "-0.02em", "fontWeight": "700" }], "label-sm": ["11px", { "lineHeight": "14px", "letterSpacing": "0.04em", "fontWeight": "600" }], "body-lg": ["16px", { "lineHeight": "24px", "letterSpacing": "0em", "fontWeight": "400" }], "display-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700" }], "body-sm": ["12px", { "lineHeight": "16px", "letterSpacing": "0.005em", "fontWeight": "400" }], "display-lg-mobile": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.015em", "fontWeight": "700" }], "label-lg": ["14px", { "lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "500" }], "label-md": ["12px", { "lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "600" }], "body-md": ["14px", { "lineHeight": "20px", "letterSpacing": "0em", "fontWeight": "400" }] } } } };</script></head><body class="bg-background font-body-md text-on-surface min-h-screen flex flex-col antialiased selection:bg-secondary-fixed selection:text-on-secondary-fixed"><header class="fixed top-0 left-0 right-0 w-full z-50 bg-primary-container shadow-[0_1px_8px_rgba(0,0,0,0.06)]"><div class="h-16 w-full px-gutter flex items-center justify-between gap-space-md"><div class="flex items-center gap-space-md shrink-0"><div class="flex items-center gap-space-sm"><div class="w-9 h-9 rounded-lg bg-surface-container-lowest/10 flex items-center justify-center"><span class="material-symbols-outlined text-tertiary-fixed text-[22px]">change_history</span></div><div><div class="flex items-center gap-space-xs"><span class="font-headline-sm text-headline-sm text-on-primary tracking-tight font-bold">DELTA BEVERAGES</span><span class="px-1.5 py-0.5 rounded bg-tertiary-fixed text-on-tertiary-fixed font-label-sm text-label-sm uppercase tracking-wider">Sentinel AI</span></div><div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-secondary-container animate-pulse"></span><span class="font-label-sm text-label-sm text-on-primary-container uppercase tracking-wider">System Online</span></div></div></div></div><nav class="hidden xl:flex items-center gap-1 shrink-0" data-active-classes="bg-surface-container-lowest/20 text-on-primary font-semibold"><a aria-current="page" class="px-3 py-2 rounded-lg transition-colors duration-150 bg-surface-container-lowest/20 text-on-primary font-semibold" data-path="live-fleet-map" href="#">Live Fleet Map</a><a class="px-3 py-2 rounded-lg font-label-md text-label-md text-on-primary-container hover:bg-surface-container-lowest/10 hover:text-on-primary transition-colors duration-150" data-path="alert-queue" href="#">Alert Queue (2)</a><a class="px-3 py-2 rounded-lg font-label-md text-label-md text-on-primary-container hover:bg-surface-container-lowest/10 hover:text-on-primary transition-colors duration-150" data-path="asset-directory" href="#">Asset Directory</a><a class="px-3 py-2 rounded-lg font-label-md text-label-md text-on-primary-container hover:bg-surface-container-lowest/10 hover:text-on-primary transition-colors duration-150" data-path="analytics" href="#">Analytics</a><a class="px-3 py-2 rounded-lg font-label-md text-label-md text-on-primary-container hover:bg-surface-container-lowest/10 hover:text-on-primary transition-colors duration-150" data-path="firmware-telemetry" href="#">Firmware &amp; Telemetry</a></nav><div class="flex items-center gap-space-md shrink-0"><div class="relative hidden lg:block"><span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-primary-container text-[18px]">search</span><input class="w-64 h-9 pl-9 pr-3 rounded-lg bg-surface-container-lowest/10 font-body-sm text-body-sm text-on-primary placeholder:text-on-primary-container focus:outline-none focus:bg-surface-container-lowest/20 transition-all" placeholder="Search Asset ID, IMEI, or Merchant..." type="text"/></div><div class="flex items-center gap-space-sm"><div class="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-container-lowest/10 font-label-sm text-label-sm text-on-primary-container"><span class="w-1.5 h-1.5 rounded-full bg-secondary-container"></span><span>42ms</span></div><button class="relative p-2 rounded-lg text-on-primary-container hover:bg-surface-container-lowest/10 hover:text-on-primary transition-colors"><span class="material-symbols-outlined text-[20px]">notifications</span><span class="absolute top-1 right-1 px-1 min-w-[14px] h-3.5 rounded-full bg-error text-on-error font-label-sm text-[10px] leading-3 flex items-center justify-center">2</span></button><div class="h-6 w-px bg-surface-container-lowest/20"></div><div class="flex items-center gap-space-sm"><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div><div class="hidden md:flex flex-col text-left"><span class="font-label-md text-label-md text-on-primary leading-tight font-semibold">Takudzwa M.</span><span class="font-label-sm text-label-sm text-on-primary-container leading-tight">Fleet Ops Lead</span></div></div></div></div></div></header><main class="w-full pt-16 bg-background flex-1 flex flex-col"><div class="flex flex-col w-full">
+<!-- Interactive Toast Notification Container -->
+<div class="fixed bottom-6 right-6 z-50 transform translate-y-20 opacity-0 pointer-events-none transition-all duration-300 flex items-center gap-space-sm bg-surface-container-lowest px-space-md py-space-sm rounded-lg shadow-xl text-on-surface" id="toastNotification">
+<span class="material-symbols-outlined text-secondary" id="toastIcon">check_circle</span>
+<span class="font-label-md text-label-md" id="toastMessage">Action completed successfully</span>
+</div>
+<!-- SUB-HEADER & FILTER CONTROLS BAR -->
+<header class="w-full bg-surface-container-lowest px-margin py-space-md shadow-sm">
+<div class="max-w-[1600px] mx-auto flex flex-col xl:flex-row xl:items-center justify-between gap-space-md">
+<!-- Title & Subtitle -->
+<div class="flex flex-col">
+<div class="flex items-center gap-space-sm">
+<h1 class="font-headline-lg text-headline-lg text-on-surface tracking-tight">Fleet Telemetry &amp; Risk Command Center</h1>
+<span class="px-2 py-0.5 rounded bg-surface-container-high text-primary font-label-sm text-label-sm uppercase tracking-wider">Harare Ops</span>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant mt-0.5">
+          Real-time monitoring across 1,420 provisioned IoT beacons (Harare Metropolitan &amp; Chitungwiza Cluster)
+        </p>
+</div>
+<!-- Action & Filter Controls -->
+<div class="flex flex-wrap items-center gap-space-sm">
+<!-- Live Cadence Stream Indicator -->
+<div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface-container-low text-on-surface font-label-md text-label-md">
+<span class="relative flex h-2 w-2">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-secondary opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2 w-2 bg-secondary"></span>
+</span>
+<span>Live Stream: <strong class="text-on-surface font-semibold">5s Cadence</strong></span>
+</div>
+<!-- Region Selector -->
+<div class="relative">
+<select class="appearance-none bg-surface-container-lowest pl-3 pr-8 py-1.5 rounded-lg font-label-md text-label-md text-on-surface shadow-sm focus:outline-none cursor-pointer">
+<option>Harare Central &amp; Suburbs</option>
+<option>Chitungwiza Industrial</option>
+<option>Ruwa &amp; Eastlea Sector</option>
+<option>Norton Logistics Corridor</option>
+</select>
+<span class="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant pointer-events-none">expand_more</span>
+</div>
+<!-- Export CSV Button -->
+<button class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-container-low hover:bg-surface-container text-on-surface font-label-md text-label-md transition-colors shadow-sm" id="btnExport">
+<span class="material-symbols-outlined text-[18px]">download</span>
+<span>Export CSV</span>
+</button>
+<!-- Provision Beacon Button -->
+<button class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-primary-container hover:bg-primary text-on-primary font-label-md text-label-md transition-all shadow-sm" id="btnProvision">
+<span class="material-symbols-outlined text-[18px]">add_circle</span>
+<span>+ Provision Beacon</span>
+</button>
+</div>
+</div>
+</header>
+<!-- MAIN WRAPPER: RESTRICTED MAX WIDTH -->
+<div class="w-full max-w-[1600px] mx-auto px-margin py-space-lg flex flex-col gap-space-lg">
+<!-- TOP KPI SUMMARY STRIP (4 Data-Dense Cards) -->
+<section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-space-md">
+<!-- Card 1: Total Tracked Assets -->
+<div class="bg-surface-container-lowest rounded-xl p-space-md shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow">
+<div class="flex items-center justify-between">
+<span class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Total Tracked Assets</span>
+<span class="w-7 h-7 rounded-lg bg-surface-container flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[18px]">kitchen</span>
+</span>
+</div>
+<div class="my-space-sm">
+<div class="font-data-metric text-data-metric text-on-surface">1,420 <span class="font-body-md text-body-md text-on-surface-variant">Coolers</span></div>
+</div>
+<div class="flex items-center justify-between text-on-surface-variant font-label-sm text-label-sm pt-2 bg-surface-container-low/40 px-2 py-1 rounded">
+<div class="flex items-center gap-1 text-primary">
+<span class="material-symbols-outlined text-[15px]">sensors</span>
+<span class="font-semibold">1,418 Online (99.8%)</span>
+</div>
+<span class="text-secondary font-semibold">+12 this week</span>
+</div>
+</div>
+<!-- Card 2: Active & Compliant -->
+<div class="bg-surface-container-lowest rounded-xl p-space-md shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow">
+<div class="flex items-center justify-between">
+<span class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Active &amp; Compliant</span>
+<span class="px-2 py-0.5 rounded font-label-sm text-label-sm font-semibold bg-surface-container-low text-primary flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span> SAFE
+          </span>
+</div>
+<div class="my-space-sm">
+<div class="font-data-metric text-data-metric text-primary">1,385 <span class="font-headline-sm text-headline-sm text-primary font-normal">(97.5%)</span></div>
+</div>
+<div class="flex items-center gap-1.5 text-on-surface-variant font-label-sm text-label-sm pt-2">
+<span class="material-symbols-outlined text-[16px] text-secondary">verified_user</span>
+<span class="truncate">Within ≤50m geofence • Nominal 3.4°C</span>
+</div>
+</div>
+<!-- Card 3: Power Outage Warnings -->
+<div class="bg-surface-container-lowest rounded-xl p-space-md shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow">
+<div class="flex items-center justify-between">
+<span class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Power Outage Warnings</span>
+<span class="px-2 py-0.5 rounded font-label-sm text-label-sm font-semibold bg-tertiary-fixed text-on-tertiary-fixed flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">bolt</span> MAINS 0V
+          </span>
+</div>
+<div class="my-space-sm">
+<div class="font-data-metric text-data-metric text-tertiary">23 <span class="font-body-md text-body-md text-on-surface-variant">Coolers</span></div>
+</div>
+<div class="flex items-center gap-1.5 text-on-surface-variant font-label-sm text-label-sm pt-2">
+<span class="material-symbols-outlined text-[16px] text-tertiary">battery_charging_full</span>
+<span class="truncate">AC Disconnected &gt; 2 hrs • Battery backup</span>
+</div>
+</div>
+<!-- Card 4: AI Anomaly Alerts -->
+<div class="bg-surface-container-lowest rounded-xl p-space-md shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow">
+<div class="flex items-center justify-between">
+<span class="font-label-md text-label-md text-error uppercase tracking-wider font-semibold">AI Anomaly Alerts</span>
+<span class="relative flex h-2.5 w-2.5">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-error opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-error"></span>
+</span>
+</div>
+<div class="my-space-sm">
+<div class="font-data-metric text-data-metric text-error">12 <span class="font-headline-sm text-headline-sm text-error font-normal">High Risk</span></div>
+</div>
+<div class="flex items-center gap-1.5 text-on-surface-variant font-label-sm text-label-sm pt-2">
+<span class="material-symbols-outlined text-[16px] text-error">warning</span>
+<span class="truncate text-error font-semibold">Theft &amp; unauthorized nighttime motion</span>
+</div>
+</div>
+</section>
+<!-- MAIN CONTENT SPLIT VIEW (70% Left Map Canvas, 30% Right Alert Panel) -->
+<div class="grid grid-cols-1 xl:grid-cols-12 gap-space-lg items-start">
+<!-- LEFT SIDE (70% / 8.4 cols -> xl:col-span-8 or col-span-8) MAP CANVAS -->
+<section class="xl:col-span-8 bg-surface-container-lowest rounded-xl shadow-sm flex flex-col overflow-hidden">
+<!-- Map Header Controls -->
+<div class="p-space-md bg-surface-container-lowest flex flex-wrap items-center justify-between gap-space-sm">
+<div class="flex items-center gap-space-sm">
+<div class="flex items-center gap-2">
+<span class="w-3 h-3 rounded-full bg-secondary animate-pulse"></span>
+<span class="font-headline-sm text-headline-sm text-on-surface">Harare Metro Live Telemetry Grid</span>
+</div>
+<span class="hidden sm:inline-block px-2 py-0.5 rounded bg-surface-container text-on-surface-variant font-label-sm text-label-sm">
+              Cluster: ZW-HRE-01
+            </span>
+</div>
+<div class="flex items-center gap-space-sm flex-wrap">
+<!-- Layer Switchers -->
+<div class="inline-flex rounded-lg bg-surface-container-low p-0.5">
+<button class="px-2.5 py-1 text-label-sm font-label-sm rounded-md bg-surface-container-lowest text-primary shadow-sm font-semibold">Fleet Vector</button>
+<button class="px-2.5 py-1 text-label-sm font-label-sm rounded-md text-on-surface-variant hover:text-on-surface transition-colors">Satellite</button>
+<button class="px-2.5 py-1 text-label-sm font-label-sm rounded-md text-on-surface-variant hover:text-on-surface transition-colors">Heatmap</button>
+</div>
+<!-- Geofence Toggle -->
+<label class="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-surface-container-low cursor-pointer select-none">
+<input checked="" class="rounded text-primary focus:ring-0 w-3.5 h-3.5 cursor-pointer accent-primary" id="toggleGeofences" type="checkbox"/>
+<span class="font-label-sm text-label-sm text-on-surface font-medium">Geofence [ON]</span>
+</label>
+</div>
+</div>
+<!-- Legend Ribbon -->
+<div class="px-space-md py-1.5 bg-surface-container-low flex flex-wrap items-center justify-between gap-2 text-on-surface-variant font-label-sm text-label-sm">
+<div class="flex items-center gap-4 flex-wrap">
+<div class="flex items-center gap-1.5">
+<span class="w-2.5 h-2.5 rounded-full bg-primary"></span>
+<span>Compliant (1,385)</span>
+</div>
+<div class="flex items-center gap-1.5">
+<span class="w-2.5 h-2.5 rounded-full bg-tertiary"></span>
+<span>Unplugged / Battery (23)</span>
+</div>
+<div class="flex items-center gap-1.5">
+<span class="relative flex h-2.5 w-2.5">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-error opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-error"></span>
+</span>
+<span class="text-error font-semibold">Breach / Displacement (12)</span>
+</div>
+</div>
+<div class="hidden md:flex items-center gap-2 text-on-surface-variant">
+<span>Accuracy: <strong class="text-on-surface">±2.5m</strong></span>
+<span>•</span>
+<span>Cell Cadence: <strong class="text-on-surface">5s</strong></span>
+</div>
+</div>
+<!-- Cartographic Visual Map Canvas -->
+<div class="relative w-full h-[580px] bg-[#f2f4f7] overflow-hidden select-none" id="mapViewport">
+<!-- Realistic SVG Road Network & Cartography Base -->
+<svg class="absolute inset-0 w-full h-full" preserveaspectratio="none" viewbox="0 0 900 600" xmlns="http://www.w3.org/2000/svg">
+<defs>
+<pattern height="60" id="gridSubtle" patternunits="userSpaceOnUse" width="60">
+<path d="M 60 0 L 0 0 0 60" fill="none" stroke="#e6e9ef" stroke-width="0.8"></path>
+</pattern>
+</defs>
+<rect fill="#f8fafc" height="100%" width="100%"></rect>
+<rect fill="url(#gridSubtle)" height="100%" width="100%"></rect>
+<!-- Green Zones / Parks -->
+<path d="M140,40 Q220,60 260,110 T300,180 L200,190 Z" fill="#eaf3ea" opacity="0.8"></path>
+<path d="M680,240 Q750,260 810,320 T720,400 L640,360 Z" fill="#eaf3ea" opacity="0.8"></path>
+<path d="M80,380 Q140,420 180,480 T100,560 L40,510 Z" fill="#eef2ea" opacity="0.6"></path>
+<!-- Major Harare Highway & Artery Roads -->
+<!-- Samora Machel Ave (East-West) -->
+<path d="M-20,290 C300,285 550,295 920,290" fill="none" stroke="#cbd5e1" stroke-width="8"></path>
+<path d="M-20,290 C300,285 550,295 920,290" fill="none" stroke="#ffffff" stroke-width="5"></path>
+<!-- Julius Nyerere / Simon Mazorodze (North-South to Highfield/Mbare) -->
+<path d="M430,-20 C425,200 440,320 280,620" fill="none" stroke="#cbd5e1" stroke-width="9"></path>
+<path d="M430,-20 C425,200 440,320 280,620" fill="none" stroke="#ffffff" stroke-width="6"></path>
+<!-- Borrowdale Road (Northeast) -->
+<path d="M430,290 C490,210 620,110 780,-20" fill="none" stroke="#cbd5e1" stroke-width="7"></path>
+<path d="M430,290 C490,210 620,110 780,-20" fill="none" stroke="#ffffff" stroke-width="4.5"></path>
+<!-- Secondary Arteries & Grids -->
+<path d="M120,80 L760,180" fill="none" stroke="#e2e8f0" stroke-width="3"></path>
+<path d="M220,-20 L240,620" fill="none" stroke="#e2e8f0" stroke-width="3"></path>
+<path d="M620,-20 L580,620" fill="none" stroke="#e2e8f0" stroke-width="3.5"></path>
+<path d="M-20,440 L920,430" fill="none" stroke="#e2e8f0" stroke-width="3"></path>
+<path d="M80,180 L440,290" fill="none" stroke="#e2e8f0" stroke-width="2.5"></path>
+<path d="M300,320 L160,540" fill="none" stroke="#e2e8f0" stroke-width="3"></path>
+<!-- Geofence Safe Zones (Circular Rings) -->
+<g id="geofenceOverlays">
+<!-- Avondale Geofence Safe Zone -->
+<circle cx="280" cy="180" fill="#a2cbf1" fill-opacity="0.18" r="48" stroke="#315b7c" stroke-dasharray="3,3" stroke-width="1.5"></circle>
+<!-- Borrowdale Geofence Safe Zone -->
+<circle cx="680" cy="130" fill="#a2cbf1" fill-opacity="0.18" r="44" stroke="#315b7c" stroke-dasharray="3,3" stroke-width="1.5"></circle>
+<!-- CBD Safe Zone -->
+<circle cx="430" cy="290" fill="#a2cbf1" fill-opacity="0.18" r="56" stroke="#315b7c" stroke-dasharray="3,3" stroke-width="1.5"></circle>
+<!-- BREACH ZONE (Highfield Illegal Destination) -->
+<circle cx="230" cy="460" fill="#ba1a1a" fill-opacity="0.12" r="54" stroke="#ba1a1a" stroke-dasharray="4,4" stroke-width="1.8"></circle>
+</g>
+<!-- Vector Displacement Line (Theft from Avondale to Highfield) -->
+<path d="M280,180 C270,290 320,380 230,460" fill="none" id="theftVector" stroke="#ba1a1a" stroke-dasharray="6,4" stroke-width="3">
+<animate attributename="stroke-dashoffset" dur="1.2s" from="40" repeatcount="indefinite" to="0"></animate>
+</path>
+</svg>
+<!-- Cartographic Labels (Harare Suburbs) -->
+<div class="absolute top-24 left-44 font-label-md text-label-md font-bold text-on-surface-variant/80 tracking-wide pointer-events-none">AVONDALE</div>
+<div class="absolute top-16 right-48 font-label-md text-label-md font-bold text-on-surface-variant/80 tracking-wide pointer-events-none">BORROWDALE</div>
+<div class="absolute top-[260px] left-[450px] font-label-md text-label-md font-bold text-on-surface-variant/90 tracking-wide pointer-events-none">HARARE CBD</div>
+<div class="absolute bottom-44 left-16 font-label-md text-label-md font-bold text-on-surface-variant/80 tracking-wide pointer-events-none">HIGHFIELD WEST</div>
+<div class="absolute bottom-28 left-[360px] font-label-md text-label-md font-bold text-on-surface-variant/70 tracking-wide pointer-events-none">MBARE HUB</div>
+<div class="absolute top-48 right-24 font-label-md text-label-md font-bold text-on-surface-variant/70 tracking-wide pointer-events-none">EASTLEA</div>
+<!-- MAP MARKERS OVERLAY -->
+<!-- 1. Compliant Cluster: OK Avondale -->
+<div class="absolute top-[165px] left-[268px] -translate-x-1/2 -translate-y-1/2 group cursor-pointer">
+<div class="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center transition-transform group-hover:scale-110 shadow-md">
+<div class="w-5 h-5 rounded-full bg-primary text-on-primary flex items-center justify-center text-[10px] font-bold">
+                18
+              </div>
+</div>
+<!-- Tooltip -->
+<div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:flex flex-col bg-surface-container-lowest px-2.5 py-1.5 rounded-lg shadow-xl whitespace-nowrap text-on-surface z-30 pointer-events-none">
+<span class="font-label-md text-label-md font-bold">OK Supermarket - Avondale</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">18 Coolers • All 100% Compliant</span>
+</div>
+</div>
+<!-- 2. Compliant Cluster: TM Pick n Pay CBD -->
+<div class="absolute top-[280px] left-[420px] -translate-x-1/2 -translate-y-1/2 group cursor-pointer">
+<div class="w-9 h-9 rounded-full bg-primary/20 flex items-center justify-center transition-transform group-hover:scale-110 shadow-md">
+<div class="w-6 h-6 rounded-full bg-primary text-on-primary flex items-center justify-center text-[11px] font-bold">
+                42
+              </div>
+</div>
+<div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:flex flex-col bg-surface-container-lowest px-2.5 py-1.5 rounded-lg shadow-xl whitespace-nowrap text-on-surface z-30 pointer-events-none">
+<span class="font-label-md text-label-md font-bold">TM Pick n Pay - Jason Moyo CBD</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">42 Coolers • Nominal Avg 3.2°C</span>
+</div>
+</div>
+<!-- 3. Compliant Cluster: Spar Borrowdale -->
+<div class="absolute top-[120px] left-[668px] -translate-x-1/2 -translate-y-1/2 group cursor-pointer">
+<div class="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center transition-transform group-hover:scale-110 shadow-md">
+<div class="w-5 h-5 rounded-full bg-primary text-on-primary flex items-center justify-center text-[10px] font-bold">
+                12
+              </div>
+</div>
+<div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:flex flex-col bg-surface-container-lowest px-2.5 py-1.5 rounded-lg shadow-xl whitespace-nowrap text-on-surface z-30 pointer-events-none">
+<span class="font-label-md text-label-md font-bold">Spar - Borrowdale Village</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">12 Units • Normal Status</span>
+</div>
+</div>
+<!-- 4. Warning Pin: Chitepo Bottle Store (Amber Pin) -->
+<div class="absolute top-[230px] left-[380px] -translate-x-1/2 -translate-y-1/2 group cursor-pointer z-20">
+<div class="relative flex items-center justify-center">
+<span class="animate-ping absolute inline-flex h-8 w-8 rounded-full bg-tertiary opacity-40"></span>
+<div class="w-7 h-7 rounded-full bg-tertiary text-on-tertiary flex items-center justify-center shadow-lg font-bold">
+<span class="material-symbols-outlined text-[16px]">power_off</span>
+</div>
+</div>
+<div class="absolute top-full left-1/2 -translate-x-1/2 mt-2 bg-surface-container-lowest px-2.5 py-1.5 rounded-lg shadow-xl whitespace-nowrap text-on-surface z-30">
+<div class="flex items-center gap-1.5 font-label-md text-label-md font-bold text-tertiary">
+<span class="material-symbols-outlined text-[14px]">warning</span>
+<span>Chitepo Bottle Store</span>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant block">AC Offline 8h • Batt 61% • 8.2°C</span>
+</div>
+</div>
+<!-- 5. CRITICAL BREACH MARKER (Highfield West) -->
+<div class="absolute top-[450px] left-[225px] -translate-x-1/2 -translate-y-1/2 z-30 group cursor-pointer">
+<div class="relative flex items-center justify-center">
+<span class="animate-ping absolute inline-flex h-12 w-12 rounded-full bg-error opacity-60"></span>
+<div class="w-9 h-9 rounded-full bg-error text-on-error flex items-center justify-center shadow-xl font-bold transition-transform group-hover:scale-125">
+<span class="material-symbols-outlined text-[20px]">fmd_bad</span>
+</div>
+</div>
+<!-- Pulsing Breach Badge Pin Card -->
+<div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 bg-surface-container-lowest p-2.5 rounded-xl shadow-2xl text-on-surface border-2 border-error w-56">
+<div class="flex items-center justify-between">
+<span class="px-1.5 py-0.5 rounded bg-error-container text-on-error-container font-label-sm text-[10px] font-bold uppercase">Theft / Breach</span>
+<span class="font-label-sm text-label-sm text-error font-bold">24.1 km/h</span>
+</div>
+<div class="font-label-md text-label-md font-bold mt-1 text-on-surface">DLTA-BCN-8821</div>
+<div class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">Highfield Res. Zone (+3.4 km)</div>
+<div class="mt-2 flex items-center gap-1 text-[11px] font-semibold text-error">
+<span class="material-symbols-outlined text-[14px]">crisis_alert</span>
+<span>Dispatch Triggered (94% AI)</span>
+</div>
+</div>
+</div>
+<!-- Floating Map Displacement Vector Pill -->
+<div class="absolute top-[310px] left-[180px] bg-surface-container-lowest/95 backdrop-blur px-3 py-1.5 rounded-full shadow-md flex items-center gap-2 pointer-events-none">
+<span class="w-2 h-2 rounded-full bg-error animate-ping"></span>
+<span class="font-label-sm text-label-sm text-error font-bold">+3.4 km displacement vector</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">• 24.1 km/h</span>
+</div>
+<!-- Floating Map Quick Overlays & Search -->
+<div class="absolute top-4 left-4 z-20 flex items-center gap-2">
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">search</span>
+<input class="w-60 h-9 pl-9 pr-3 rounded-lg bg-surface-container-lowest/95 backdrop-blur text-body-sm font-body-sm text-on-surface shadow-md placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-secondary transition-all" placeholder="Locate Asset / Store ID..." type="text"/>
+</div>
+<button class="h-9 px-3 rounded-lg bg-surface-container-lowest/95 backdrop-blur text-on-surface shadow-md hover:bg-surface-container font-label-sm text-label-sm flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">my_location</span>
+<span>Center Harare</span>
+</button>
+</div>
+<!-- Floating Map Zoom Controls -->
+<div class="absolute bottom-4 right-4 z-20 flex flex-col gap-1">
+<button class="w-8 h-8 rounded-lg bg-surface-container-lowest shadow-md flex items-center justify-center text-on-surface hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined text-[18px]">add</span>
+</button>
+<button class="w-8 h-8 rounded-lg bg-surface-container-lowest shadow-md flex items-center justify-center text-on-surface hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined text-[18px]">remove</span>
+</button>
+<button class="w-8 h-8 rounded-lg bg-surface-container-lowest shadow-md flex items-center justify-center text-on-surface hover:bg-surface-container transition-colors" title="Full Screen View">
+<span class="material-symbols-outlined text-[18px]">fullscreen</span>
+</button>
+</div>
+</div>
+</section>
+<!-- RIGHT SIDE (30% / xl:col-span-4) - 'AI RISK RADAR' ALERT PANEL -->
+<section class="xl:col-span-4 flex flex-col gap-space-md">
+<!-- Risk Radar Container -->
+<div class="bg-surface-container-lowest rounded-xl shadow-sm overflow-hidden flex flex-col">
+<!-- Radar Header -->
+<div class="p-space-md bg-surface-container-lowest flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-error text-[22px]">radar</span>
+<div>
+<h2 class="font-headline-sm text-headline-sm text-on-surface">AI Risk Radar</h2>
+<span class="font-body-sm text-body-sm text-error font-semibold">2 Urgent Actions Required</span>
+</div>
+</div>
+<span class="px-2 py-0.5 rounded-full bg-error-container text-on-error-container font-label-sm text-label-sm font-bold animate-pulse">
+              LIVE
+            </span>
+</div>
+<!-- Alert Queue Filter Tabs -->
+<div class="px-space-md pt-2 pb-1 bg-surface-container-low/50 flex items-center gap-2">
+<button class="px-3 py-1 rounded-md text-label-sm font-label-sm font-semibold bg-surface-container-lowest shadow-sm text-on-surface">
+              All (12)
+            </button>
+<button class="px-3 py-1 rounded-md text-label-sm font-label-sm font-semibold text-error hover:bg-surface-container-lowest transition-colors flex items-center gap-1">
+              Critical (4)
+            </button>
+<button class="px-3 py-1 rounded-md text-label-sm font-label-sm font-semibold text-tertiary hover:bg-surface-container-lowest transition-colors">
+              Warning (8)
+            </button>
+</div>
+<!-- Alert Cards Scroll Area -->
+<div class="p-space-md flex flex-col gap-space-md max-h-[580px] overflow-y-auto">
+<!-- ALERT CARD 1: CRITICAL RED ACCENT -->
+<article class="bg-surface-container-lowest rounded-xl p-space-md shadow-md relative overflow-hidden transition-all hover:shadow-lg border-l-4 border-error">
+<!-- Header Badges -->
+<div class="flex items-center justify-between mb-2">
+<span class="px-2 py-0.5 rounded bg-error-container text-on-error-container font-label-sm text-label-sm font-bold uppercase tracking-wider flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-error animate-ping"></span>
+                  CRITICAL DISPLACEMENT
+                </span>
+<span class="font-label-sm text-label-sm text-on-surface-variant font-medium">T+ 08m ago</span>
+</div>
+<!-- Title & IDs -->
+<h3 class="font-headline-sm text-headline-sm text-on-surface">Commercial Display Fridge #8821</h3>
+<div class="flex items-center gap-2 text-on-surface-variant font-label-sm text-label-sm mt-0.5">
+<span>Asset ID: <strong class="text-on-surface font-semibold">DLTA-BCN-8821</strong></span>
+<span>•</span>
+<span>Type: Double G-Door</span>
+</div>
+<!-- Anomaly Details -->
+<div class="mt-2.5 p-2 rounded-lg bg-surface-container-low text-on-surface font-body-sm text-body-sm flex flex-col gap-1">
+<div class="flex items-start gap-1.5 text-error font-medium">
+<span class="material-symbols-outlined text-[16px] shrink-0 mt-0.5">wrong_location</span>
+<span>Moved 3.4km outside geofence boundary into unapproved residential sector.</span>
+</div>
+<div class="text-on-surface-variant text-[11px] pt-1">
+<strong>Origin Store:</strong> OK Supermarket — Avondale Branch<br/>
+<strong>Current GPS:</strong> Highfield West Res. (-17.8641, 31.0024)
+                </div>
+</div>
+<!-- Real-time Telemetry Mini Grid -->
+<div class="grid grid-cols-3 gap-2 my-space-sm">
+<div class="p-2 rounded bg-surface-container-low text-center">
+<span class="block font-label-sm text-[10px] text-on-surface-variant uppercase">Speed</span>
+<span class="font-label-md text-label-md font-bold text-error">24.1 km/h</span>
+</div>
+<div class="p-2 rounded bg-surface-container-low text-center">
+<span class="block font-label-sm text-[10px] text-on-surface-variant uppercase">Power</span>
+<span class="font-label-md text-label-md font-bold text-tertiary">BAT 84%</span>
+</div>
+<div class="p-2 rounded bg-surface-container-low text-center">
+<span class="block font-label-sm text-[10px] text-on-surface-variant uppercase">Theft AI</span>
+<span class="font-label-md text-label-md font-bold text-error">94% Risk</span>
+</div>
+</div>
+<!-- Action CTAs -->
+<div class="flex flex-col sm:flex-row gap-2 pt-1">
+<button class="flex-1 py-2 px-3 rounded-lg bg-secondary hover:bg-secondary/90 text-on-secondary font-label-md text-label-md font-semibold text-center transition-all shadow-sm flex items-center justify-center gap-1.5" onclick="dispatchRapidResponse('DLTA-BCN-8821')">
+<span class="material-symbols-outlined text-[16px]">local_police</span>
+<span>Dispatch Response</span>
+</button>
+<button class="py-2 px-3 rounded-lg bg-error-container hover:bg-error hover:text-on-error text-on-error-container font-label-md text-label-md font-semibold transition-all flex items-center justify-center gap-1" onclick="lockoutCompressor('DLTA-BCN-8821')">
+<span class="material-symbols-outlined text-[16px]">lock_reset</span>
+<span>Lockout</span>
+</button>
+</div>
+</article>
+<!-- ALERT CARD 2: WARNING AMBER ACCENT -->
+<article class="bg-surface-container-lowest rounded-xl p-space-md shadow-md relative overflow-hidden transition-all hover:shadow-lg border-l-4 border-tertiary">
+<!-- Header Badges -->
+<div class="flex items-center justify-between mb-2">
+<span class="px-2 py-0.5 rounded bg-tertiary-fixed text-on-tertiary-fixed font-label-sm text-label-sm font-bold uppercase tracking-wider flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">power_off</span>
+                  PROLONGED POWER OUTAGE
+                </span>
+<span class="font-label-sm text-label-sm text-on-surface-variant font-medium">T+ 2h 15m ago</span>
+</div>
+<!-- Title & IDs -->
+<h3 class="font-headline-sm text-headline-sm text-on-surface">Double Door Chiller #4012</h3>
+<div class="flex items-center gap-2 text-on-surface-variant font-label-sm text-label-sm mt-0.5">
+<span>Asset ID: <strong class="text-on-surface font-semibold">DLTA-BCN-4012</strong></span>
+<span>•</span>
+<span>Store: Chitepo Bottle Store</span>
+</div>
+<!-- Anomaly Details -->
+<div class="mt-2.5 p-2 rounded-lg bg-surface-container-low text-on-surface font-body-sm text-body-sm flex flex-col gap-1">
+<div class="flex items-start gap-1.5 text-tertiary font-medium">
+<span class="material-symbols-outlined text-[16px] shrink-0 mt-0.5">thermostat</span>
+<span>Mains cut overnight. Internal temperature rising (8.2°C).</span>
+</div>
+<div class="text-on-surface-variant text-[11px] pt-1">
+<strong>Merchant:</strong> Chitepo Beverage Outlet • Harare Central<br/>
+<strong>Cold Chain SLA:</strong> Threshold exceeded (&gt;6.0°C)
+                </div>
+</div>
+<!-- Real-time Telemetry Mini Grid -->
+<div class="grid grid-cols-3 gap-2 my-space-sm">
+<div class="p-2 rounded bg-surface-container-low text-center">
+<span class="block font-label-sm text-[10px] text-on-surface-variant uppercase">Internal Temp</span>
+<span class="font-label-md text-label-md font-bold text-tertiary">8.2°C</span>
+</div>
+<div class="p-2 rounded bg-surface-container-low text-center">
+<span class="block font-label-sm text-[10px] text-on-surface-variant uppercase">Mains / Batt</span>
+<span class="font-label-md text-label-md font-bold text-on-surface">0V (61%)</span>
+</div>
+<div class="p-2 rounded bg-surface-container-low text-center">
+<span class="block font-label-sm text-[10px] text-on-surface-variant uppercase">Spoilage AI</span>
+<span class="font-label-md text-label-md font-bold text-tertiary">68% Risk</span>
+</div>
+</div>
+<!-- Action CTAs -->
+<div class="flex flex-col sm:flex-row gap-2 pt-1">
+<a class="flex-1 py-2 px-3 rounded-lg bg-surface-container-low hover:bg-surface-container text-on-surface font-label-md text-label-md font-semibold text-center transition-all flex items-center justify-center gap-1.5" href="tel:+263772345678">
+<span class="material-symbols-outlined text-[16px]">call</span>
+<span>Call Merchant</span>
+</a>
+<button class="py-2 px-3 rounded-lg bg-surface-container-lowest hover:bg-surface-container text-on-surface-variant font-label-md text-label-md font-medium transition-all shadow-sm" onclick="acknowledgeAlert('DLTA-BCN-4012')">
+                  Acknowledge
+                </button>
+</div>
+</article>
+<!-- ALERT CARD 3: RESOLVED / RECENT LOG -->
+<article class="bg-surface-container-low/60 rounded-xl p-space-sm text-on-surface flex items-center justify-between gap-space-sm">
+<div class="flex items-center gap-2.5">
+<span class="w-7 h-7 rounded-full bg-primary/20 text-primary flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-[16px]">check_circle</span>
+</span>
+<div>
+<span class="font-label-md text-label-md font-semibold text-on-surface block">Fridge #3109 • Geofence Re-entry</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Confirmed safe at Spar Borrowdale • T+ 14m ago</span>
+</div>
+</div>
+<span class="font-label-sm text-label-sm font-semibold text-primary px-2 py-0.5 rounded bg-surface-container-lowest">
+                Resolved
+              </span>
+</article>
+</div>
+</div>
+<!-- Asset Diagnostic Spotlight Card -->
+<div class="bg-surface-container-lowest rounded-xl p-space-md shadow-sm flex flex-col gap-2">
+<div class="flex items-center justify-between">
+<span class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider font-semibold">Sensor Health Matrix</span>
+<span class="font-label-sm text-label-sm text-secondary font-semibold">Harare Cluster</span>
+</div>
+<div class="grid grid-cols-2 gap-2 text-on-surface font-body-sm text-body-sm">
+<div class="flex items-center justify-between p-2 rounded bg-surface-container-low">
+<span class="text-on-surface-variant">GPS Triangulation</span>
+<span class="font-semibold text-primary">Optimal</span>
+</div>
+<div class="flex items-center justify-between p-2 rounded bg-surface-container-low">
+<span class="text-on-surface-variant">Cellular Signal</span>
+<span class="font-semibold text-primary">-74 dBm (LTE)</span>
+</div>
+<div class="flex items-center justify-between p-2 rounded bg-surface-container-low">
+<span class="text-on-surface-variant">Vibration Gyro</span>
+<span class="font-semibold text-tertiary">Active Tilt</span>
+</div>
+<div class="flex items-center justify-between p-2 rounded bg-surface-container-low">
+<span class="text-on-surface-variant">Beacon Battery Avg</span>
+<span class="font-semibold text-primary">92% Capacity</span>
+</div>
+</div>
+</div>
+</section>
+</div>
+<!-- BOTTOM QUICK TELEMETRY LOGS / ACTIVITY FEED STRIP -->
+<section class="bg-surface-container-lowest rounded-xl shadow-sm overflow-hidden flex flex-col">
+<!-- Section Header -->
+<div class="p-space-md bg-surface-container-lowest flex flex-wrap items-center justify-between gap-space-sm">
+<div class="flex items-center gap-space-sm">
+<span class="material-symbols-outlined text-primary text-[20px]">reorder</span>
+<h2 class="font-headline-sm text-headline-sm text-on-surface">Live Fleet Telemetry Stream (Recent 5 Ingests)</h2>
+<span class="px-2 py-0.5 rounded bg-surface-container font-label-sm text-label-sm text-on-surface-variant">
+            Buffer: 50/sec
+          </span>
+</div>
+<div class="flex items-center gap-2">
+<button class="px-2.5 py-1 rounded bg-surface-container-low hover:bg-surface-container text-on-surface font-label-sm text-label-sm transition-colors flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">tune</span>
+<span>Filter Columns</span>
+</button>
+<a class="px-2.5 py-1 rounded bg-surface-container-low hover:bg-surface-container text-secondary font-label-sm text-label-sm font-semibold transition-colors flex items-center gap-1" href="#">
+<span>View Full Directory</span>
+<span class="material-symbols-outlined text-[14px]">arrow_forward</span>
+</a>
+</div>
+</div>
+<!-- Telemetry Matrix Table -->
+<div class="w-full overflow-x-auto">
+<table class="w-full text-left font-body-sm text-body-sm text-on-surface">
+<thead class="bg-surface-container-low text-on-surface-variant font-label-sm text-label-sm uppercase tracking-wider">
+<tr>
+<th class="px-space-md py-3 font-semibold">Asset ID &amp; Type</th>
+<th class="px-space-md py-3 font-semibold">Retail Merchant / Deployment</th>
+<th class="px-space-md py-3 font-semibold">Telemetry Status</th>
+<th class="px-space-md py-3 font-semibold">Internal Temp</th>
+<th class="px-space-md py-3 font-semibold">Power Source</th>
+<th class="px-space-md py-3 font-semibold">Beacon Batt</th>
+<th class="px-space-md py-3 font-semibold">Last Ping</th>
+<th class="px-space-md py-3 font-semibold text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-surface-container-low">
+<!-- Row 1 (Critical) -->
+<tr class="hover:bg-error-container/20 transition-colors">
+<td class="px-space-md py-3">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-error animate-ping"></span>
+<span class="font-semibold text-on-surface">DLTA-BCN-8821</span>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Commercial Double Door</span>
+</td>
+<td class="px-space-md py-3">
+<span class="font-medium text-on-surface">OK Supermarket (Avondale)</span>
+<span class="font-label-sm text-label-sm text-error block">Now in Highfield Res. Zone</span>
+</td>
+<td class="px-space-md py-3">
+<span class="px-2 py-0.5 rounded bg-error-container text-on-error-container font-label-sm text-label-sm font-bold uppercase inline-flex items-center gap-1">
+<span class="material-symbols-outlined text-[13px]">fmd_bad</span> Geofence Breach
+                </span>
+</td>
+<td class="px-space-md py-3 font-semibold text-tertiary">
+                4.8°C
+              </td>
+<td class="px-space-md py-3">
+<span class="text-error font-medium">Mains Cut (0V)</span>
+</td>
+<td class="px-space-md py-3 font-medium text-on-surface">
+                84%
+              </td>
+<td class="px-space-md py-3 text-on-surface-variant font-label-sm text-label-sm">
+                5 sec ago
+              </td>
+<td class="px-space-md py-3 text-right">
+<button class="px-2 py-1 rounded bg-error text-on-error hover:bg-error/90 font-label-sm text-label-sm font-semibold transition-colors" onclick="dispatchRapidResponse('DLTA-BCN-8821')">
+                  Intercept
+                </button>
+</td>
+</tr>
+<!-- Row 2 (Warning) -->
+<tr class="hover:bg-surface-container-low/50 transition-colors">
+<td class="px-space-md py-3">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-tertiary"></span>
+<span class="font-semibold text-on-surface">DLTA-BCN-4012</span>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Single Door Chiller</span>
+</td>
+<td class="px-space-md py-3">
+<span class="font-medium text-on-surface">Chitepo Bottle Store</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant block">Harare Central</span>
+</td>
+<td class="px-space-md py-3">
+<span class="px-2 py-0.5 rounded bg-tertiary-fixed text-on-tertiary-fixed font-label-sm text-label-sm font-bold uppercase inline-flex items-center gap-1">
+<span class="material-symbols-outlined text-[13px]">power_off</span> Outage &gt; 8h
+                </span>
+</td>
+<td class="px-space-md py-3 font-semibold text-error">
+                8.2°C ↑
+              </td>
+<td class="px-space-md py-3">
+<span class="text-tertiary font-medium">Battery Backup</span>
+</td>
+<td class="px-space-md py-3 font-medium text-on-surface">
+                61%
+              </td>
+<td class="px-space-md py-3 text-on-surface-variant font-label-sm text-label-sm">
+                12 sec ago
+              </td>
+<td class="px-space-md py-3 text-right">
+<button class="px-2 py-1 rounded bg-surface-container-low hover:bg-surface-container text-on-surface font-label-sm text-label-sm font-medium transition-colors" onclick="acknowledgeAlert('DLTA-BCN-4012')">
+                  Details
+                </button>
+</td>
+</tr>
+<!-- Row 3 (Nominal) -->
+<tr class="hover:bg-surface-container-low/50 transition-colors">
+<td class="px-space-md py-3">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-secondary"></span>
+<span class="font-semibold text-on-surface">DLTA-BCN-9402</span>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Mega Visual Merchandiser</span>
+</td>
+<td class="px-space-md py-3">
+<span class="font-medium text-on-surface">TM Pick n Pay (Jason Moyo)</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant block">Aisle 3 • Beverages</span>
+</td>
+<td class="px-space-md py-3">
+<span class="px-2 py-0.5 rounded bg-surface-container-low text-primary font-label-sm text-label-sm font-semibold uppercase inline-flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span> Nominal
+                </span>
+</td>
+<td class="px-space-md py-3 font-semibold text-primary">
+                3.1°C
+              </td>
+<td class="px-space-md py-3">
+<span class="text-on-surface-variant">230V AC Mains</span>
+</td>
+<td class="px-space-md py-3 font-medium text-on-surface">
+                98%
+              </td>
+<td class="px-space-md py-3 text-on-surface-variant font-label-sm text-label-sm">
+                18 sec ago
+              </td>
+<td class="px-space-md py-3 text-right">
+<button class="p-1 rounded text-on-surface-variant hover:text-on-surface">
+<span class="material-symbols-outlined text-[18px]">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Row 4 (Nominal) -->
+<tr class="hover:bg-surface-container-low/50 transition-colors">
+<td class="px-space-md py-3">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-secondary"></span>
+<span class="font-semibold text-on-surface">DLTA-BCN-3109</span>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Standard Beverage Cooler</span>
+</td>
+<td class="px-space-md py-3">
+<span class="font-medium text-on-surface">Spar (Borrowdale Village)</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant block">Forecourt Display</span>
+</td>
+<td class="px-space-md py-3">
+<span class="px-2 py-0.5 rounded bg-surface-container-low text-primary font-label-sm text-label-sm font-semibold uppercase inline-flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span> Nominal
+                </span>
+</td>
+<td class="px-space-md py-3 font-semibold text-primary">
+                3.4°C
+              </td>
+<td class="px-space-md py-3">
+<span class="text-on-surface-variant">230V AC Mains</span>
+</td>
+<td class="px-space-md py-3 font-medium text-on-surface">
+                99%
+              </td>
+<td class="px-space-md py-3 text-on-surface-variant font-label-sm text-label-sm">
+                25 sec ago
+              </td>
+<td class="px-space-md py-3 text-right">
+<button class="p-1 rounded text-on-surface-variant hover:text-on-surface">
+<span class="material-symbols-outlined text-[18px]">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Row 5 (Nominal) -->
+<tr class="hover:bg-surface-container-low/50 transition-colors">
+<td class="px-space-md py-3">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-secondary"></span>
+<span class="font-semibold text-on-surface">DLTA-BCN-1194</span>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Compact Countertop Cooler</span>
+</td>
+<td class="px-space-md py-3">
+<span class="font-medium text-on-surface">TotalEnergies Samora Machel</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant block">Kiosk Express</span>
+</td>
+<td class="px-space-md py-3">
+<span class="px-2 py-0.5 rounded bg-surface-container-low text-primary font-label-sm text-label-sm font-semibold uppercase inline-flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span> Nominal
+                </span>
+</td>
+<td class="px-space-md py-3 font-semibold text-primary">
+                2.9°C
+              </td>
+<td class="px-space-md py-3">
+<span class="text-on-surface-variant">230V AC Mains</span>
+</td>
+<td class="px-space-md py-3 font-medium text-on-surface">
+                94%
+              </td>
+<td class="px-space-md py-3 text-on-surface-variant font-label-sm text-label-sm">
+                42 sec ago
+              </td>
+<td class="px-space-md py-3 text-right">
+<button class="p-1 rounded text-on-surface-variant hover:text-on-surface">
+<span class="material-symbols-outlined text-[18px]">more_vert</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+</div>
+<!-- Client-Side Micro-Interactions Script -->
+<script>
+    function showToast(msg, iconName = 'check_circle', isError = false) {
+      const toast = document.getElementById('toastNotification');
+      const toastMsg = document.getElementById('toastMessage');
+      const toastIcon = document.getElementById('toastIcon');
+      
+      toastMsg.innerText = msg;
+      toastIcon.innerText = iconName;
+      if (isError) {
+        toastIcon.classList.remove('text-secondary');
+        toastIcon.classList.add('text-error');
+      } else {
+        toastIcon.classList.remove('text-error');
+        toastIcon.classList.add('text-secondary');
+      }
+      
+      toast.classList.remove('translate-y-20', 'opacity-0', 'pointer-events-none');
+      setTimeout(() => {
+        toast.classList.add('translate-y-20', 'opacity-0', 'pointer-events-none');
+      }, 4000);
+    }
+
+    function dispatchRapidResponse(assetId) {
+      showToast('Rapid Response Unit Dispatched for ' + assetId + ' to Highfield West perimeter.', 'local_police');
+    }
+
+    function lockoutCompressor(assetId) {
+      if (confirm('Initiate remote compressor and firmware lockout for ' + assetId + '? Unit will be immobilized.')) {
+        showToast('Compressor telemetry command sent: ASSET LOCKED', 'lock', true);
+      }
+    }
+
+    function acknowledgeAlert(assetId) {
+      showToast('Outage alert logged and SLA ticket generated for ' + assetId, 'verified');
+    }
+
+    // Toggle Geofences Layer
+    const geofenceCheck = document.getElementById('toggleGeofences');
+    if (geofenceCheck) {
+      geofenceCheck.addEventListener('change', (e) => {
+        const overlay = document.getElementById('geofenceOverlays');
+        const theftVector = document.getElementById('theftVector');
+        if (overlay && theftVector) {
+          overlay.style.display = e.target.checked ? 'block' : 'none';
+          theftVector.style.display = e.target.checked ? 'block' : 'none';
+        }
+        showToast(e.target.checked ? 'Geofence boundaries visible' : 'Geofence boundaries hidden', 'layers');
+      });
+    }
+
+    // Provision Beacon Trigger
+    const btnProvision = document.getElementById('btnProvision');
+    if (btnProvision) {
+      btnProvision.addEventListener('click', () => {
+        showToast('Opening IoT Beacon Provisioning Wizard (Bluetooth LE Scanner active)...', 'add_circle');
+      });
+    }
+
+    // Export CSV Trigger
+    const btnExport = document.getElementById('btnExport');
+    if (btnExport) {
+      btnExport.addEventListener('click', () => {
+        showToast('Generating telemetry audit log (1,420 assets)... CSV Download starting', 'download');
+      });
+    }
+  </script>
+</div></main><footer class="w-full bg-surface-container-low shadow-[0_-1px_4px_rgba(0,0,0,0.03)]"><div class="w-full px-gutter h-10 flex items-center justify-between text-on-surface-variant font-label-sm text-label-sm"><div class="flex items-center gap-space-md"><span>Telemetry Engine: <strong class="text-on-surface font-semibold">v4.18.2-prod</strong></span><span class="hidden sm:inline">•</span><span class="hidden sm:inline">Broker: <strong class="text-on-surface font-semibold">aws.af-south-1.iot</strong></span><span class="hidden md:inline">•</span><span class="hidden md:inline">Connected Fleets: <strong class="text-on-surface font-semibold">14,290 Assets</strong></span></div><div class="flex items-center gap-space-md"><span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-secondary-container"></span> Real-Time Sync</span><span>© 2025 Delta Beverages Operations Ltd.</span></div></div></footer></body></html>
