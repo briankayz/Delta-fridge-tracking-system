@@ -36,6 +36,8 @@ export interface RiskInput {
   local_hour: number;          // 0..23, Africa/Harare
   shift: ShiftWindow;
   force_curfew?: boolean;
+  /** An approved relocation window is active: movement is expected, cap at warning. */
+  authorized_relocation?: boolean;
 }
 
 export function isCurfew(hour: number, shift: ShiftWindow): boolean {
@@ -144,7 +146,18 @@ export function scoreRisk(input: RiskInput): RiskResult {
     });
   }
 
-  const score = Math.min(100, reasons.reduce((s, x) => s + x.points, 0));
+  let score = Math.min(100, reasons.reduce((s, x) => s + x.points, 0));
+  if (input.authorized_relocation && (d > r || moving)) {
+    // Planned, approved move: keep the evidence visible but never escalate to a theft alert.
+    const before = score;
+    score = Math.min(score, CRITICAL_THRESHOLD - 1);
+    reasons.push({
+      code: 'AUTHORIZED_RELOCATION',
+      label: 'Approved relocation in progress',
+      detail: 'Movement matches an approved relocation request, so this is not treated as theft.',
+      points: score - before,
+    });
+  }
   const severity: Severity = score >= CRITICAL_THRESHOLD ? 'critical' : score >= WARNING_THRESHOLD ? 'warning' : 'nominal';
 
   const families = [
@@ -153,7 +166,7 @@ export function scoreRisk(input: RiskInput): RiskResult {
     moving,
     reasons.some((x) => x.code === 'SHOCK_TILT'),
   ].filter(Boolean).length;
-  const confidence = score < WARNING_THRESHOLD ? 0 : Math.min(99, 50 + 12.5 * families);
+  const confidence = score < WARNING_THRESHOLD ? 0 : Math.min(99, Math.round(50 + 12.5 * families));
 
   return { score, severity, confidence, geofenceBreached: d > r, reasons };
 }

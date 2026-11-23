@@ -1,35 +1,43 @@
 import os from 'node:os';
 import { createApp } from './app.ts';
+import { loadConfig } from './config.ts';
+import { seedDemo } from './seedDemo.ts';
+import { log } from './util.ts';
 
-const PORT = Number(process.env.PORT ?? 8787);
-const HOST = process.env.HOST ?? '0.0.0.0';
+const cfg = loadConfig();
+const svc = await createApp({ cfg });
 
-const { server, close } = createApp({
-  ingestToken: process.env.INGEST_TOKEN || undefined,
-  forceCurfew: process.env.DEMO_FORCE_CURFEW === '1',
-});
+if (cfg.demoMode) await seedDemo(svc.db, cfg, svc.fleet, svc.users);
+await svc.users.bootstrapAdmin(cfg.adminEmail, cfg.adminPassword);
 
-server.on('error', (err: NodeJS.ErrnoException) => {
+svc.server.on('error', (err: NodeJS.ErrnoException) => {
   if (err.code === 'EADDRINUSE') {
-    console.error(`Port ${PORT} is already in use by another program. Start with another port, e.g. PORT=8788 npm run dev`);
+    log.error(`Port ${cfg.port} is already in use. Set PORT to another value.`);
     process.exit(1);
   }
   throw err;
 });
 
-server.listen(PORT, HOST, () => {
+svc.server.listen(cfg.port, cfg.host, () => {
+  svc.startBackground();
   const lan = Object.values(os.networkInterfaces())
     .flat()
     .filter((i) => i && i.family === 'IPv4' && !i.internal)
     .map((i) => i!.address);
-  console.log(`Delta Asset Guard backend listening on :${PORT}`);
-  console.log(`  local:  http://localhost:${PORT}/health`);
-  for (const ip of lan) {
-    console.log(`  LAN:    http://${ip}:${PORT}/api/v1   ws://${ip}:${PORT}/ws/telemetry`);
+  log.info('Delta Asset Guard API ready', {
+    port: cfg.port,
+    database: cfg.databaseUrl ? 'postgres' : `embedded (${cfg.dataDir})`,
+    demo_mode: cfg.demoMode,
+    lan: lan.map((ip) => `http://${ip}:${cfg.port}`),
+  });
+  if (cfg.demoMode) {
+    log.info('Demo sign-in', { emails: ['ops@delta.demo', 'tech@delta.demo', 'security@delta.demo', 'admin@delta.demo'], password: cfg.demoPassword });
   }
-  if (process.env.DEMO_FORCE_CURFEW === '1') console.log('  DEMO_FORCE_CURFEW=1: all hours treated as after-hours');
 });
 
-const shutdown = () => close().then(() => process.exit(0));
-process.on('SIGINT', shutdown);
-process.on('SIGTERM', shutdown);
+const shutdown = (signal: string) => {
+  log.info('shutting down', { signal });
+  svc.close().then(() => process.exit(0));
+};
+process.on('SIGINT', () => shutdown('SIGINT'));
+process.on('SIGTERM', () => shutdown('SIGTERM'));

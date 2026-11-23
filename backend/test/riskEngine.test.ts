@@ -83,3 +83,10 @@ test('harareHour is UTC+2', () => {
   assert.equal(harareHour(new Date('2026-11-23T21:30:00Z')), 23);
   assert.equal(harareHour(new Date('2026-11-23T23:10:00Z')), 1);
 });
+
+test('approved relocation caps a breach below critical and explains why', () => {
+  const r = scoreRisk({ ...base, distance_m: 2420, speed_kmh: 38.5, mains_connected: false, vibration_status: 'Elevated', authorized_relocation: true });
+  assert.equal(r.severity, 'warning');
+  assert.equal(r.score, 74);
+  assert.ok(r.reasons.some((x) => x.code === 'AUTHORIZED_RELOCATION' && x.points < 0));
+});
