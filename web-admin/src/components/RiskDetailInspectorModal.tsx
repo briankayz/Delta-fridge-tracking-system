@@ -72,8 +72,8 @@ function headline(c: CoolerAsset): { title: string; body: string } {
   return { title: 'No risk detected', body: 'Inside its geofence, on mains power and within cold-chain limits.' };
 }
 
-const Fact: React.FC<{ label: string; children: React.ReactNode; tone?: string }> = ({ label, children, tone }) => (
-  <div className="rounded-lg border border-line bg-white px-4 py-3">
+const Fact: React.FC<{ label: string; children: React.ReactNode; tone?: string; className?: string }> = ({ label, children, tone, className }) => (
+  <div className={cx('rounded-lg border border-line bg-white px-4 py-3', className)}>
     <div className="text-xs text-slate-500">{label}</div>
     <div className={cx('mt-0.5 text-lg font-semibold tabular', tone ?? 'text-slate-900')}>{children}</div>
   </div>
@@ -192,13 +192,49 @@ export const RiskDetailInspectorModal: React.FC<RiskDetailInspectorModalProps> =
     cooler.displacementM >= 1000 ? `${(cooler.displacementM / 1000).toFixed(2)} km` : `${Math.round(cooler.displacementM)} m`;
   const ringOffset = 2 * Math.PI * 26 * (1 - Math.min(100, cooler.riskScore) / 100);
 
+  const actionPanel = (
+    <>
+      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+        {incident ? (
+          <span>
+            <Link to={`/incidents/${incident.id}`} className="font-mono font-medium text-delta-700 hover:underline">
+              {incident.id}
+            </Link>{' '}
+            · {KIND_LABEL[incident.kind]} · opened {formatCat(incident.opened_at)} ·{' '}
+            {incident.status === 'open' ? (
+              <span className="font-medium text-red-700">unacknowledged</span>
+            ) : (
+              <>acknowledged by {incident.acknowledged_by}</>
+            )}
+            {incident.assigned_name && <> · assigned to {incident.assigned_name}</>}
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1.5">
+            <CircleCheck className="h-3.5 w-3.5 text-emerald-600" aria-hidden="true" />
+            No open incident
+          </span>
+        )}
+        {meta?.demo_mode && can('demo:control') && (cooler.simulationActive || cooler.status === 'critical') && (
+          <Button
+            size="sm"
+            icon={RotateCcw}
+            onClick={() => run('Demo reset', () => api.demoReset(cooler.id), 'Cooler returned to its store.')}
+          >
+            Demo: return to store
+          </Button>
+        )}
+      </div>
+      {incident && <IncidentActions incident={incident} onChanged={onIncidentChanged} run={run} />}
+    </>
+  );
+
   return (
     <div className="fixed inset-0 z-50 flex justify-end" role="dialog" aria-modal="true" aria-labelledby="inspector-title">
       <button type="button" aria-label="Close inspector" onClick={onClose} className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px]" />
 
       <div className="relative h-full w-full max-w-5xl bg-canvas shadow-2xl flex flex-col">
         {/* Header */}
-        <header className="bg-white border-b border-line px-6 py-4">
+        <header className="bg-white border-b border-line px-4 sm:px-6 py-4">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
@@ -243,10 +279,10 @@ export const RiskDetailInspectorModal: React.FC<RiskDetailInspectorModalProps> =
         </header>
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6 [&>*]:shrink-0">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 sm:space-y-6 [&>*]:shrink-0">
           {/* Verdict + key facts */}
-          <div className="grid grid-cols-1 lg:grid-cols-[1.4fr_1fr_1fr_1fr] gap-3">
-            <div className={cx('rounded-lg border px-4 py-3 flex items-center gap-4', s.soft, 'border-line')}>
+          <div className="grid grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr] gap-3">
+            <div className={cx('col-span-2 lg:col-span-1 rounded-lg border px-4 py-3 flex items-center gap-4', s.soft, 'border-line')}>
               <svg width="64" height="64" viewBox="0 0 64 64" className="-rotate-90 shrink-0" aria-hidden="true">
                 <circle cx="32" cy="32" r="26" fill="none" stroke="#E2E8F0" strokeWidth="7" />
                 <circle
@@ -272,10 +308,13 @@ export const RiskDetailInspectorModal: React.FC<RiskDetailInspectorModalProps> =
             <Fact label="Distance from store" tone={cooler.isBreached ? 'text-red-700' : undefined}>
               {distance}
             </Fact>
-            <Fact label={incidentStart ? 'Incident open for' : 'Last report'}>
+            <Fact className="col-span-2 lg:col-span-1" label={incidentStart ? 'Incident open for' : 'Last report'}>
               {incidentStart ? formatDuration(incidentStart, now) : cooler.lastPing}
             </Fact>
           </div>
+
+          {/* Phones: actions sit in the scroll flow instead of a tall sticky footer */}
+          <Card className="sm:hidden p-4 space-y-3">{actionPanel}</Card>
 
           <div className="grid grid-cols-1 xl:grid-cols-5 gap-6">
             {/* Explanation */}
@@ -311,7 +350,7 @@ export const RiskDetailInspectorModal: React.FC<RiskDetailInspectorModalProps> =
               <div className="relative isolate h-80">
                 <IncidentRouteMap cooler={cooler} />
               </div>
-              <dl className="grid grid-cols-3 divide-x divide-line border-t border-line text-xs">
+              <dl className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-line border-t border-line text-xs">
                 <div className="px-4 py-2.5">
                   <dt className="text-slate-500">Coordinates</dt>
                   <dd className="font-mono text-slate-900">
@@ -367,39 +406,7 @@ export const RiskDetailInspectorModal: React.FC<RiskDetailInspectorModalProps> =
         </div>
 
         {/* Actions */}
-        <footer className="bg-white border-t border-line px-6 py-3 space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
-            {incident ? (
-              <span>
-                <Link to={`/incidents/${incident.id}`} className="font-mono font-medium text-delta-700 hover:underline">
-                  {incident.id}
-                </Link>{' '}
-                · {KIND_LABEL[incident.kind]} · opened {formatCat(incident.opened_at)} ·{' '}
-                {incident.status === 'open' ? (
-                  <span className="font-medium text-red-700">unacknowledged</span>
-                ) : (
-                  <>acknowledged by {incident.acknowledged_by}</>
-                )}
-                {incident.assigned_name && <> · assigned to {incident.assigned_name}</>}
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1.5">
-                <CircleCheck className="h-3.5 w-3.5 text-emerald-600" aria-hidden="true" />
-                No open incident
-              </span>
-            )}
-            {meta?.demo_mode && can('demo:control') && (cooler.simulationActive || cooler.status === 'critical') && (
-              <Button
-                size="sm"
-                icon={RotateCcw}
-                onClick={() => run('Demo reset', () => api.demoReset(cooler.id), 'Cooler returned to its store.')}
-              >
-                Demo: return to store
-              </Button>
-            )}
-          </div>
-          {incident && <IncidentActions incident={incident} onChanged={onIncidentChanged} run={run} />}
-        </footer>
+        <footer className="hidden sm:block bg-white border-t border-line px-6 py-3 space-y-3">{actionPanel}</footer>
       </div>
     </div>
   );

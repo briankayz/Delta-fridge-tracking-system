@@ -110,7 +110,37 @@ export const RelocationsPage: React.FC<PageProps> = ({ feed }) => {
       )}
 
       <Card className="overflow-hidden">
-        <div className="overflow-x-auto">
+        {/* Phones: one card per request */}
+        <ul className="md:hidden divide-y divide-line">
+          {items.length === 0 && <li className="px-4 py-10 text-center text-sm text-slate-500">No relocation requests yet.</li>}
+          {items.map((r) => (
+            <li key={r.id} className="px-4 py-3 space-y-1.5">
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-medium text-slate-900">{r.asset_id}</span>
+                <span className={cx('rounded px-1.5 py-0.5 text-[11px] font-medium ring-1 ring-inset capitalize', STATUS_STYLE[r.status])}>{r.status}</span>
+              </div>
+              <div className="text-sm text-slate-700">
+                To {r.to_retailer_name ?? `${r.to_lat.toFixed(4)}, ${r.to_lng.toFixed(4)}`} · {r.reason}
+              </div>
+              <div className="text-xs text-slate-500">
+                {formatDateTime(r.window_start)} → {formatDateTime(r.window_end)} · {r.requested_by}
+                {r.decided_by && ` · decided by ${r.decided_by}`}
+              </div>
+              {r.status === 'pending' && can('relocation:decide') && (
+                <div className="flex gap-2 pt-1">
+                  <Button size="sm" variant="primary" icon={Check} onClick={() => void decide(r.id, true)}>
+                    Approve
+                  </Button>
+                  <Button size="sm" icon={X} onClick={() => void decide(r.id, false)}>
+                    Reject
+                  </Button>
+                </div>
+              )}
+            </li>
+          ))}
+        </ul>
+
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-slate-50 text-left text-xs text-slate-500 border-b border-line">
               <tr>

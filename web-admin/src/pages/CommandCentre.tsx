@@ -44,7 +44,7 @@ export const CommandCentre: React.FC<PageProps> = ({ feed, search, inspect }) =>
         <div className="xl:col-span-8 min-w-0">
           <FleetMap fleet={shown} onSelectCooler={(c) => inspect(c.id)} />
         </div>
-        <div className="xl:col-span-4 min-w-0 space-y-6">
+        <div className="xl:col-span-4 min-w-0 grid gap-6 md:grid-cols-2 xl:grid-cols-1 items-start">
           <IncidentQueue incidents={incidents} fleetById={fleetById} now={now} onInspect={inspect} />
           <FleetHealthPanel fleet={fleet} offlineAfterMin={meta?.offline_after_min ?? 15} />
         </div>

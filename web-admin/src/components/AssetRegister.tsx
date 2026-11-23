@@ -11,6 +11,51 @@ interface AssetRegisterProps {
 
 type Filter = 'all' | Severity;
 
+const MobileRow: React.FC<{ c: CoolerAsset; flashing: boolean; onSelect: () => void }> = ({ c, flashing, onSelect }) => {
+  const s = STATUS_STYLE[c.status];
+  return (
+    <li>
+      <button type="button" onClick={onSelect} className={cx('w-full text-left px-4 py-3 active:bg-slate-50', flashing && 'dag-flash')}>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="font-medium text-slate-900">
+              {c.id}
+              {c.isVirtual && (
+                <span className="ml-1.5 rounded bg-gold-50 px-1 py-px text-[10px] font-medium text-gold-700 ring-1 ring-inset ring-gold-300">Demo</span>
+              )}
+            </div>
+            <div className="text-sm text-slate-700 truncate">{c.retailer}</div>
+            <div className={cx('text-xs truncate', c.isBreached ? 'text-red-700 font-medium' : 'text-slate-500')}>
+              {c.region} · {c.locationName}
+            </div>
+          </div>
+          <StatusBadge severity={c.status} label={c.statusLabel} />
+        </div>
+        <dl className="mt-2 grid grid-cols-4 gap-2 text-xs">
+          <div>
+            <dt className="text-slate-500">Risk</dt>
+            <dd className={cx('font-medium tabular', s.text)}>{c.riskScore}%</dd>
+          </div>
+          <div>
+            <dt className="text-slate-500">Cabinet</dt>
+            <dd className={cx('font-medium tabular', (c.internalTemp ?? 0) > 6 ? 'text-red-700' : 'text-slate-800')}>
+              {c.internalTemp != null ? `${c.internalTemp.toFixed(1)}°C` : '—'}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-slate-500">Power</dt>
+            <dd className={cx('font-medium', c.isPowerCut ? 'text-amber-800' : 'text-slate-800')}>{!c.lastSeen ? '—' : c.isPowerCut ? 'Off' : 'Mains'}</dd>
+          </div>
+          <div>
+            <dt className="text-slate-500">Report</dt>
+            <dd className="font-medium text-slate-800 truncate">{c.lastPing}</dd>
+          </div>
+        </dl>
+      </button>
+    </li>
+  );
+};
+
 export const AssetRegister: React.FC<AssetRegisterProps> = ({ fleet, onSelectCooler, flashingRowId }) => {
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState<Filter>('all');
@@ -57,7 +102,14 @@ export const AssetRegister: React.FC<AssetRegisterProps> = ({ fleet, onSelectCoo
         }
       />
 
-      <div className="overflow-x-auto">
+      {/* Phones: one card per cooler */}
+      <ul className="md:hidden divide-y divide-line">
+        {rows.length === 0 && <li className="px-4 py-10 text-center text-sm text-slate-500">No coolers match this filter.</li>}
+        {rows.map((c) => <MobileRow key={c.id} c={c} flashing={flashingRowId === c.id} onSelect={() => onSelectCooler(c)} />)}
+      </ul>
+
+      {/* Tablets and up: full table */}
+      <div className="hidden md:block overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-slate-50 text-left text-xs font-medium text-slate-500 border-b border-line">
             <tr>

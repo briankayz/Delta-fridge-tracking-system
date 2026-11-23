@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Download, ExternalLink, FileText, ShieldAlert } from 'lucide-react';
+import { ArrowLeft, Download, ExternalLink, FileText, ShieldAlert } from 'lucide-react';
 import { PageHeader } from '../components/PageHeader';
 import { IncidentActions, IncidentTimeline } from '../components/IncidentActions';
 import { Button, Card, CardHeader, Segmented, cx } from '../components/ui';
@@ -77,7 +77,7 @@ export const IncidentsPage: React.FC<PageProps & { incidentId?: string }> = ({ f
 
       <div className="grid grid-cols-1 xl:grid-cols-5 gap-6 items-start">
         {/* List */}
-        <Card className="xl:col-span-2 overflow-hidden">
+        <Card className={cx('xl:col-span-2 overflow-hidden', incidentId && 'hidden xl:block')}>
           <div className="p-3 border-b border-line flex flex-wrap gap-2">
             <Segmented<StatusFilter>
               label="Status"
@@ -129,7 +129,11 @@ export const IncidentsPage: React.FC<PageProps & { incidentId?: string }> = ({ f
         </Card>
 
         {/* Detail */}
-        <div className="xl:col-span-3 space-y-6">
+        <div className={cx('xl:col-span-3 space-y-6 min-w-0', !incidentId && 'hidden xl:block')}>
+          <Link to="/incidents" className="xl:hidden inline-flex items-center gap-1.5 text-sm font-medium text-delta-700">
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+            All incidents
+          </Link>
           {!detail ? (
             <Card className="p-10 text-center text-sm text-slate-500">
               <FileText className="mx-auto mb-2 h-8 w-8 text-slate-300" aria-hidden="true" />

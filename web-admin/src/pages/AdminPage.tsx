@@ -91,7 +91,57 @@ const Users: React.FC<PageProps> = ({ feed }) => {
         </Card>
       )}
       <Card className="overflow-hidden">
-        <div className="overflow-x-auto">
+        {/* Phones: one card per person */}
+        <ul className="md:hidden divide-y divide-line">
+          {users.map((u) => (
+            <li key={u.id} className={cx('px-4 py-3 space-y-2', !u.active && 'opacity-60')}>
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="font-medium text-slate-900">{u.name}</div>
+                  <div className="text-xs text-slate-500 truncate">{u.email}</div>
+                </div>
+                <span className={cx('shrink-0 rounded px-1.5 py-0.5 text-[11px] font-medium ring-1 ring-inset', u.active ? 'bg-emerald-50 text-emerald-700 ring-emerald-600/20' : 'bg-slate-100 text-slate-600 ring-slate-400/30')}>
+                  {u.active ? 'Active' : 'Disabled'}
+                </span>
+              </div>
+              <div className="text-xs text-slate-600">
+                {u.region ?? 'All regions'} · last sign-in {u.last_login_at ? formatDateTime(u.last_login_at) : 'never'}
+              </div>
+              <select
+                aria-label={`Role for ${u.name}`}
+                disabled={u.id === me?.id}
+                className="h-9 w-full rounded-md bg-white px-2 text-sm ring-1 ring-inset ring-slate-300 disabled:opacity-60"
+                value={u.role}
+                onChange={(e) => void update(u.id, { role: e.target.value }, 'Change role')}
+              >
+                {ROLES.map((r) => (
+                  <option key={r} value={r}>
+                    {ROLE_LABEL[r]}
+                  </option>
+                ))}
+              </select>
+              {u.id !== me?.id && (
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    icon={KeyRound}
+                    onClick={() => {
+                      const pw = window.prompt(`New temporary password for ${u.name} (10+ characters, letters and numbers):`);
+                      if (pw) void update(u.id, { password: pw }, 'Reset password');
+                    }}
+                  >
+                    Reset password
+                  </Button>
+                  <Button size="sm" onClick={() => void update(u.id, { active: !u.active }, u.active ? 'Disable' : 'Enable')}>
+                    {u.active ? 'Disable' : 'Enable'}
+                  </Button>
+                </div>
+              )}
+            </li>
+          ))}
+        </ul>
+
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-slate-50 text-left text-xs text-slate-500 border-b border-line">
               <tr>
@@ -170,7 +220,23 @@ const Audit: React.FC = () => {
   useEffect(() => void api.audit(300).then(setRows).catch(() => undefined), []);
   return (
     <Card className="overflow-hidden">
-      <div className="overflow-x-auto">
+      {/* Phones: compact log lines */}
+      <ul className="md:hidden divide-y divide-line">
+        {rows.map((r) => (
+          <li key={r.id} className="px-4 py-2.5">
+            <div className="flex items-baseline justify-between gap-2">
+              <span className={cx('font-mono text-xs', r.action.includes('failed') ? 'text-red-700' : 'text-slate-800')}>{r.action}</span>
+              <span className="shrink-0 text-[11px] text-slate-500">{formatDateTime(r.at)}</span>
+            </div>
+            <div className="text-xs text-slate-600 truncate">
+              {r.actor_name}
+              {r.target && <span className="font-mono"> · {r.target}</span>}
+            </div>
+          </li>
+        ))}
+      </ul>
+
+      <div className="hidden md:block overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-slate-50 text-left text-xs text-slate-500 border-b border-line">
             <tr>

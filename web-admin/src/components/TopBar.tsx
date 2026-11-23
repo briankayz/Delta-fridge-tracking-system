@@ -20,6 +20,12 @@ export const TopBar: React.FC<TopBarProps> = ({ path, onSearchChange, onSimulate
   const [menuOpen, setMenuOpen] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
   const [pwOpen, setPwOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const search = (v: string) => {
+    setQuery(v);
+    onSearchChange(v);
+  };
   const [pwDone, setPwDone] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -46,20 +52,36 @@ export const TopBar: React.FC<TopBarProps> = ({ path, onSearchChange, onSimulate
           <span className="w-8 h-8 rounded-md bg-delta-900 flex items-center justify-center">
             <DeltaMark size={20} />
           </span>
+          <span className="sm:hidden font-brand font-semibold text-delta-700">Asset Guard</span>
         </div>
 
-        <label className="relative flex-1 max-w-md">
+        {/* Desktop / tablet search */}
+        <label className="relative hidden sm:block flex-1 max-w-md">
           <span className="sr-only">Search coolers</span>
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" aria-hidden="true" />
           <input
             type="search"
+            value={query}
             placeholder="Search cooler, retailer or region"
-            onChange={(e) => onSearchChange(e.target.value)}
+            onChange={(e) => search(e.target.value)}
             className="w-full h-9 pl-9 pr-3 rounded-md bg-slate-50 text-sm text-slate-900 placeholder:text-slate-400 ring-1 ring-inset ring-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-delta-500"
           />
         </label>
 
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex items-center gap-1 sm:gap-2">
+          <button
+            type="button"
+            onClick={() => setSearchOpen((v) => !v)}
+            aria-label="Search"
+            aria-expanded={searchOpen}
+            className={cx(
+              'sm:hidden relative inline-flex items-center justify-center w-9 h-9 rounded-md hover:bg-slate-100',
+              query ? 'text-delta-700' : 'text-slate-500'
+            )}
+          >
+            <Search className="h-[18px] w-[18px]" aria-hidden="true" />
+            {query && <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-delta-600" />}
+          </button>
           {meta?.demo_mode && can('demo:control') && (
             <button
               type="button"
@@ -86,7 +108,7 @@ export const TopBar: React.FC<TopBarProps> = ({ path, onSearchChange, onSimulate
             )}
           </Link>
 
-          <div className="h-6 w-px bg-line mx-1" />
+          <div className="hidden sm:block h-6 w-px bg-line mx-1" />
 
           <div className="relative" ref={menuRef}>
             <button
@@ -106,7 +128,7 @@ export const TopBar: React.FC<TopBarProps> = ({ path, onSearchChange, onSimulate
                   {user?.region ? ` · ${user.region}` : ''}
                 </span>
               </span>
-              <ChevronDown className="h-4 w-4 text-slate-400" aria-hidden="true" />
+              <ChevronDown className="hidden sm:block h-4 w-4 text-slate-400" aria-hidden="true" />
             </button>
             {menuOpen && (
               <div role="menu" className="absolute right-0 mt-2 w-64 rounded-lg bg-white shadow-pop ring-1 ring-line p-1">
@@ -152,6 +174,24 @@ export const TopBar: React.FC<TopBarProps> = ({ path, onSearchChange, onSimulate
             setPwDone(true);
           }}
         />
+      )}
+
+      {/* Phone search row */}
+      {searchOpen && (
+        <div className="sm:hidden border-t border-line px-4 py-2">
+          <label className="relative block">
+            <span className="sr-only">Search coolers</span>
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" aria-hidden="true" />
+            <input
+              type="search"
+              autoFocus
+              value={query}
+              placeholder="Search cooler, retailer or region"
+              onChange={(e) => search(e.target.value)}
+              className="w-full h-10 pl-9 pr-3 rounded-md bg-slate-50 text-base text-slate-900 placeholder:text-slate-400 ring-1 ring-inset ring-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-delta-500"
+            />
+          </label>
+        </div>
       )}
 
       {/* Mobile navigation */}

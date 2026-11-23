@@ -105,7 +105,7 @@ function FitFleet({ fleet, trigger }: { fleet: CoolerAsset[]; trigger: number })
   useEffect(() => {
     if (trigger === 0) return;
     const pts = fleet.map((c) => [c.lat, c.lng] as [number, number]);
-    if (pts.length > 0) map.fitBounds(L.latLngBounds(pts), { padding: [48, 48], maxZoom: 14 });
+    if (pts.length > 0) map.fitBounds(L.latLngBounds(pts), { paddingTopLeft: [40, 64], paddingBottomRight: [40, 40], maxZoom: 14 });
     // fleet intentionally excluded: only refit when the user asks
   }, [trigger, map]);
   return null;
@@ -117,6 +117,11 @@ export const FleetMap: React.FC<FleetMapProps> = ({ fleet, onSelectCooler }) => 
   const [showGeofences, setShowGeofences] = useState(true);
   const [layer, setLayer] = useState<MapLayer>('light');
   const [fitTrigger, setFitTrigger] = useState(0);
+  // Narrow screens show less of Harare at the default zoom: fit the whole fleet once it loads.
+  const hasFleet = fleet.length > 0;
+  useEffect(() => {
+    if (hasFleet && window.innerWidth < 1024) setFitTrigger((n) => (n === 0 ? 1 : n));
+  }, [hasFleet]);
 
   const critical = fleet.filter((c) => c.status === 'critical');
   const counts = useMemo(
@@ -162,7 +167,7 @@ export const FleetMap: React.FC<FleetMapProps> = ({ fleet, onSelectCooler }) => 
       />
 
       {/* `isolate` contains Leaflet's internal z-indexes (400+) so overlays/modals stay on top */}
-      <div className="relative isolate w-full h-[560px]">
+      <div className="relative isolate w-full h-[380px] sm:h-[480px] lg:h-[560px]">
         <MapContainer center={HARARE_CENTER} zoom={12} scrollWheelZoom style={{ width: '100%', height: '100%' }}>
           <TileLayer key={layer} {...TILE_LAYERS[layer]} />
           <FitFleet fleet={fleet} trigger={fitTrigger} />
@@ -237,7 +242,7 @@ export const FleetMap: React.FC<FleetMapProps> = ({ fleet, onSelectCooler }) => 
         </MapContainer>
 
         {/* Legend (counts are live beacons on this map) */}
-        <div className="absolute left-3 bottom-7 z-[500] rounded-md bg-white/95 backdrop-blur shadow-pop ring-1 ring-line px-3 py-2 text-xs text-slate-700 space-y-1">
+        <div className="hidden sm:block absolute left-3 bottom-7 z-[500] rounded-md bg-white/95 backdrop-blur shadow-pop ring-1 ring-line px-3 py-2 text-xs text-slate-700 space-y-1">
           <div className="flex items-center gap-2">
             <span className="w-3 h-3 rounded-full bg-delta-700 ring-2 ring-white shadow" />
             Secure <span className="ml-auto pl-3 tabular text-slate-500">{counts.secure}</span>
@@ -285,6 +290,20 @@ export const FleetMap: React.FC<FleetMapProps> = ({ fleet, onSelectCooler }) => 
             </span>
           </button>
         )}
+      </div>
+      {/* Phones: legend below the map so it never covers markers */}
+      <div className="sm:hidden flex flex-wrap gap-x-4 gap-y-1.5 border-t border-line px-4 py-2.5 text-xs text-slate-700">
+        {[
+          ['bg-delta-700', 'Secure', counts.secure],
+          ['bg-amber-600', 'Power', counts.power],
+          ['bg-slate-400', 'Offline', counts.offline],
+          ['bg-red-600', 'Theft', counts.critical],
+        ].map(([dot, label, n]) => (
+          <span key={label as string} className="inline-flex items-center gap-1.5">
+            <span className={cx('w-2.5 h-2.5 rounded-full', dot as string)} />
+            {label} <span className="tabular text-slate-500">{n}</span>
+          </span>
+        ))}
       </div>
     </Card>
   );

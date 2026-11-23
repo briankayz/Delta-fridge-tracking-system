@@ -64,7 +64,43 @@ export const ReportsPage: React.FC<PageProps> = ({ feed }) => {
 
       <Card className="overflow-hidden">
         <CardHeader title="By region" icon={BarChart3} subtitle="MTTA = average time to acknowledge · MTTR = average time to resolve" />
-        <div className="overflow-x-auto">
+        {/* Phones: one card per region */}
+        <ul className="md:hidden divide-y divide-line">
+          {rows === null && <li className="px-4 py-10 text-center text-sm text-slate-500">Loading…</li>}
+          {rows?.map((r) => (
+            <li key={r.region} className="px-4 py-3">
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="font-medium text-slate-900">{r.region}</span>
+                <span className="text-xs text-slate-500 tabular">{r.coolers} coolers</span>
+              </div>
+              <div className="mt-2 flex items-center gap-2">
+                <div className="h-1.5 flex-1 rounded-full bg-slate-100 overflow-hidden">
+                  <div className="h-full rounded-full bg-delta-600" style={{ width: `${(r.incidents / maxIncidents) * 100}%` }} />
+                </div>
+                <span className="text-xs font-medium text-slate-700 tabular">{r.incidents} incidents</span>
+              </div>
+              <dl className="mt-2 grid grid-cols-3 gap-x-3 gap-y-1.5 text-xs tabular">
+                {(
+                  [
+                    ['Theft', r.displacement],
+                    ['Power', r.power],
+                    ['Offline', r.signal_lost],
+                    ['Recovered', r.recovered],
+                    ['Still open', r.still_open],
+                    ['MTTA / MTTR', `${mins(r.mtta_min)} / ${mins(r.mttr_min)}`],
+                  ] as [string, string | number][]
+                ).map(([k, v]) => (
+                  <div key={k}>
+                    <dt className="text-slate-500">{k}</dt>
+                    <dd className="font-medium text-slate-900">{v}</dd>
+                  </div>
+                ))}
+              </dl>
+            </li>
+          ))}
+        </ul>
+
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-slate-50 text-left text-xs text-slate-500 border-b border-line">
               <tr>
