@@ -3,70 +3,106 @@
 @tailwind utilities;
 
 @layer base {
-  html, body {
+  html,
+  body {
     margin: 0;
     padding: 0;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-feature-settings: 'cv11', 'ss01';
+  }
+  :focus-visible {
+    outline: 2px solid #2b5a90;
+    outline-offset: 2px;
+  }
+  html {
+    scroll-behavior: smooth;
+    scroll-padding-top: 72px;
   }
 }
 
-/* Custom Leaflet Map styling */
+@layer utilities {
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* ---- Leaflet ------------------------------------------------------------------------- */
 .leaflet-container {
   width: 100%;
   height: 100%;
-  background-color: #f8fafc;
+  background-color: #eef2f6;
   font-family: 'Inter', sans-serif;
 }
+.leaflet-popup-content-wrapper {
+  border-radius: 8px;
+  box-shadow: 0 12px 32px -8px rgba(15, 23, 42, 0.25);
+}
+.leaflet-popup-content {
+  margin: 12px 14px;
+}
+.leaflet-control-zoom a {
+  color: #123965 !important;
+}
+.leaflet-tooltip {
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 12px -4px rgba(15, 23, 42, 0.2);
+  font-size: 11px;
+  font-weight: 600;
+  color: #0f172a;
+}
+.dag-marker {
+  background: none;
+  border: none;
+}
 
-/* Custom Marker Pulsing Animation */
-@keyframes pulse-ring {
+/* Breach marker halo (respects reduced motion) */
+@keyframes dag-halo {
   0% {
-    transform: scale(0.95);
-    opacity: 0.8;
-  }
-  50% {
-    transform: scale(1.6);
-    opacity: 0.2;
+    transform: scale(0.6);
+    opacity: 0.55;
   }
   100% {
-    transform: scale(0.95);
-    opacity: 0.8;
+    transform: scale(1.8);
+    opacity: 0;
+  }
+}
+.dag-halo {
+  animation: dag-halo 1.8s ease-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .dag-halo,
+  .animate-pulse {
+    animation: none !important;
   }
 }
 
-.pulsing-breach-marker {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+/* Row highlight when a new incident lands */
+@keyframes dag-flash {
+  0%,
+  100% {
+    background-color: transparent;
+  }
+  30% {
+    background-color: #fee2e2;
+  }
+}
+.dag-flash {
+  animation: dag-flash 1.5s ease-in-out 2;
 }
 
-.pulsing-breach-marker::before {
-  content: '';
-  position: absolute;
-  width: 36px;
-  height: 36px;
-  border-radius: 9999px;
-  background-color: rgba(239, 68, 68, 0.4);
-  animation: pulse-ring 1.4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
-
-/* Custom Scrollbar for Alert Queue */
+/* ---- Scrollbars ---------------------------------------------------------------------- */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
-
 ::-webkit-scrollbar-track {
-  background: #f2f3ff;
+  background: transparent;
 }
-
 ::-webkit-scrollbar-thumb {
-  background: #c2c7ce;
-  border-radius: 3px;
+  background: #cbd5e1;
+  border-radius: 4px;
 }
-
 ::-webkit-scrollbar-thumb:hover {
-  background: #72787e;
+  background: #94a3b8;
 }
-

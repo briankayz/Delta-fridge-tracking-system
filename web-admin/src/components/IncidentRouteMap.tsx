@@ -22,7 +22,7 @@ export const IncidentRouteMap: React.FC<{ cooler: CoolerAsset }> = ({ cooler }) 
   const origin: [number, number] | null = cooler.routeOrigin ? [cooler.routeOrigin.lat, cooler.routeOrigin.lng] : null;
   const current: [number, number] = [cooler.lat, cooler.lng];
   const path: [number, number][] = cooler.trail.length > 1 ? cooler.trail : origin ? [origin, current] : [current];
-  const tone = cooler.status === 'critical' ? '#ba1a1a' : cooler.status === 'warning' ? '#735c00' : '#10B981';
+  const tone = cooler.status === 'critical' ? '#DC2626' : cooler.status === 'warning' ? '#D97706' : '#059669';
   const fitPoints = origin ? [origin, current] : [current];
 
   return (
@@ -39,9 +39,9 @@ export const IncidentRouteMap: React.FC<{ cooler: CoolerAsset }> = ({ cooler }) 
           <Circle
             center={origin}
             radius={cooler.geofenceRadiusM}
-            pathOptions={{ color: '#0062a1', fillColor: '#0062a1', fillOpacity: 0.15, dashArray: '4,4', weight: 2 }}
+            pathOptions={{ color: '#123965', fillColor: '#123965', fillOpacity: 0.15, dashArray: '4,4', weight: 2 }}
           />
-          <CircleMarker center={origin} radius={6} pathOptions={{ color: '#ffffff', weight: 2, fillColor: '#0062a1', fillOpacity: 1 }}>
+          <CircleMarker center={origin} radius={6} pathOptions={{ color: '#ffffff', weight: 2, fillColor: '#123965', fillOpacity: 1 }}>
             <Tooltip permanent direction="top" offset={[0, -8]}>
               {cooler.routeOrigin?.name}
             </Tooltip>
@@ -50,7 +50,7 @@ export const IncidentRouteMap: React.FC<{ cooler: CoolerAsset }> = ({ cooler }) 
       )}
 
       {path.length > 1 && cooler.displacementM > cooler.geofenceRadiusM && (
-        <Polyline positions={path} pathOptions={{ color: '#ba1a1a', weight: 3.5, dashArray: '8,6', lineCap: 'round' }} />
+        <Polyline positions={path} pathOptions={{ color: '#DC2626', weight: 3.5, dashArray: '8,6', lineCap: 'round' }} />
       )}
 
       {cooler.displacementM > cooler.geofenceRadiusM && (

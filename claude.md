@@ -33,15 +33,15 @@ The system consists of two distinct components:
 
 ## Brand & Visual System Constraints
 
-Strictly adhere to the following styling tokens across all generated UI components:
+Strictly adhere to the following styling tokens across all generated UI components. Navy and gold are sampled from delta.co.zw and the Delta Corporation logo (navy serif wordmark, gold nested-triangle mark). Gold is an accent only (rules, active markers, logo) and is never used for body text on white. Icons: `lucide-react` only. Status is always icon + label, never colour alone. Charts: one y-axis per chart (no dual axes).
 
 ```json
 {
   "colors": {
-    "primaryNavy": "#315B7C",
-    "darkNavy": "#003366",
-    "accentGold": "#D4AF37",
-    "accentCyan": "#0087DC",
+    "primaryNavy": "#123965",
+    "darkNavy": "#082563",
+    "accentGold": "#C8B967",
+    "accentBlue": "#2B5A90",
     "bgDark": "#0F172A",
     "bgDarkCard": "#1E293B",
     "bgLight": "#F8FAFC",

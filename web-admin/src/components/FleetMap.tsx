@@ -1,92 +1,40 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import { MapContainer, TileLayer, Marker, Popup, Circle, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
+import { Map as MapIcon, Maximize2, ShieldAlert, Unplug } from 'lucide-react';
 import { CoolerAsset } from '../types';
+import { Card, CardHeader, Segmented, StatusBadge, cx } from './ui';
 
 interface FleetMapProps {
   fleet: CoolerAsset[];
   onSelectCooler: (cooler: CoolerAsset) => void;
-  selectedCooler?: CoolerAsset | null;
-  summary?: { activeCompliant: number; powerOutages: number; anomalyAlerts: number };
 }
 
-// Custom Leaflet Icons builder
-const createClusterIcon = (count: number) => {
-  return L.divIcon({
-    className: 'custom-fleet-cluster',
-    html: `
-      <div style="
-        width: 34px;
-        height: 34px;
-        border-radius: 9999px;
-        background-color: rgba(21, 67, 99, 0.2);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        cursor: pointer;
-      ">
-        <div style="
-          width: 24px;
-          height: 24px;
-          border-radius: 9999px;
-          background-color: #154363;
-          color: #ffffff;
-          font-weight: 700;
-          font-size: 11px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-family: 'Inter', sans-serif;
-        ">
-          ${count}
-        </div>
-      </div>
-    `,
-    iconSize: [34, 34],
-    iconAnchor: [17, 17],
-  });
+// ---- Basemaps (all keyless). CARTO now watermarks unauthenticated tiles: do not use. ----
+type MapLayer = 'light' | 'streets' | 'satellite';
+const TILE_LAYERS: Record<MapLayer, { url: string; attribution: string; maxZoom: number }> = {
+  light: {
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+    attribution: 'Tiles &copy; Esri &mdash; Esri, HERE, Garmin, &copy; OpenStreetMap contributors',
+    maxZoom: 16,
+  },
+  streets: {
+    url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    maxZoom: 19,
+  },
+  satellite: {
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    attribution: 'Tiles &copy; Esri &mdash; Esri, Maxar, Earthstar Geographics',
+    maxZoom: 19,
+  },
 };
 
-const createWarningIcon = () => {
-  return L.divIcon({
-    className: 'custom-warning-marker',
-    html: `
-      <div style="position: relative; display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; cursor: pointer;">
-        <span style="position: absolute; width: 32px; height: 32px; border-radius: 9999px; background-color: rgba(115, 92, 0, 0.3); animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;"></span>
-        <div style="width: 26px; height: 26px; border-radius: 9999px; background-color: #735c00; color: #ffffff; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.15);">
-          <span class="material-symbols-outlined" style="font-size: 15px;">power_off</span>
-        </div>
-      </div>
-    `,
-    iconSize: [32, 32],
-    iconAnchor: [16, 16],
-  });
-};
+const HARARE_CENTER: [number, number] = [-17.82485, 31.05303];
 
-const createBreachIcon = (speedText: string) => {
-  return L.divIcon({
-    className: 'custom-breach-marker',
-    html: `
-      <div style="position: relative; display: flex; flex-direction: column; align-items: center; cursor: pointer;">
-        <div style="position: relative; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;">
-          <span style="position: absolute; width: 44px; height: 44px; border-radius: 9999px; background-color: rgba(186, 26, 26, 0.35); animation: ping 1.2s cubic-bezier(0, 0, 0.2, 1) infinite;"></span>
-          <div style="width: 30px; height: 30px; border-radius: 9999px; background-color: #ba1a1a; color: #ffffff; display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 12px rgba(186, 26, 26, 0.4); z-index: 10;">
-            <span class="material-symbols-outlined" style="font-size: 18px;">fmd_bad</span>
-          </div>
-        </div>
-        <div style="background-color: #ffffff; border: 1.5px solid #ba1a1a; padding: 2px 6px; border-radius: 6px; box-shadow: 0 4px 8px rgba(0,0,0,0.15); margin-top: -4px; white-space: nowrap; z-index: 20;">
-          <span style="font-size: 9px; font-weight: 800; color: #ba1a1a; font-family: monospace; text-transform: uppercase;">BREACH: ${speedText}</span>
-        </div>
-      </div>
-    `,
-    iconSize: [44, 52],
-    iconAnchor: [22, 26],
-  });
-};
-
-// Reuse DivIcon instances: a new icon object on every render makes Leaflet rebuild the
-// marker DOM (restarting the pulse animation) each time telemetry ticks.
+// ---- Markers --------------------------------------------------------------------------
+// Reuse DivIcon instances: a new object per render makes Leaflet rebuild the marker DOM.
 const ICON_CACHE = new Map<string, L.DivIcon>();
 function cachedIcon(key: string, make: () => L.DivIcon): L.DivIcon {
   let icon = ICON_CACHE.get(key);
@@ -98,189 +46,130 @@ function cachedIcon(key: string, make: () => L.DivIcon): L.DivIcon {
   return icon;
 }
 
-// Keyless basemaps. CARTO basemaps now return an "API KEY REQUIRED" watermark
-// tile for unauthenticated requests, so they must not be used here.
-type MapLayer = 'vector' | 'satellite' | 'heatmap';
-const TILE_LAYERS: Record<MapLayer, { url: string; attribution: string; maxZoom: number }> = {
-  vector: {
-    url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-    attribution:
-      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-    maxZoom: 19,
-  },
-  satellite: {
-    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-    attribution: 'Tiles &copy; Esri &mdash; Esri, Maxar, Earthstar Geographics',
-    maxZoom: 19,
-  },
-  heatmap: {
-    // Muted light-gray canvas so red breach pins stand out
-    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',
-    attribution: 'Tiles &copy; Esri &mdash; Esri, HERE, Garmin, &copy; OpenStreetMap contributors',
-    maxZoom: 16,
-  },
-};
+const svg = (el: React.ReactElement) => renderToStaticMarkup(el);
 
-// Default Harare Metro coordinates (module scope: a stable reference)
-const HARARE_CENTER: [number, number] = [-17.82485, 31.05303];
+const nominalIcon = () =>
+  L.divIcon({
+    className: 'dag-marker',
+    html: `<span style="display:block;width:14px;height:14px;border-radius:9999px;background:#123965;border:2.5px solid #fff;box-shadow:0 1px 4px rgba(15,23,42,.35)"></span>`,
+    iconSize: [14, 14],
+    iconAnchor: [7, 7],
+  });
 
-// Map center controller helper — only re-centres when the coordinates actually change
-function MapRecenter({ center }: { center: [number, number] }) {
+const warningIcon = () =>
+  L.divIcon({
+    className: 'dag-marker',
+    html: `<span style="display:flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:9999px;background:#D97706;border:2px solid #fff;box-shadow:0 2px 6px rgba(15,23,42,.3);color:#fff">${svg(
+      <Unplug size={14} strokeWidth={2.5} />
+    )}</span>`,
+    iconSize: [26, 26],
+    iconAnchor: [13, 13],
+  });
+
+const breachIcon = (speed: string) =>
+  L.divIcon({
+    className: 'dag-marker',
+    html: `<div style="position:relative;display:flex;flex-direction:column;align-items:center">
+      <span class="dag-halo" style="position:absolute;top:-6px;width:44px;height:44px;border-radius:9999px;background:rgba(220,38,38,.35)"></span>
+      <span style="position:relative;display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:9999px;background:#DC2626;border:2.5px solid #fff;box-shadow:0 4px 10px rgba(220,38,38,.45);color:#fff">${svg(
+        <ShieldAlert size={16} strokeWidth={2.5} />
+      )}</span>
+      <span style="margin-top:3px;padding:1px 6px;border-radius:4px;background:#fff;border:1px solid #FECACA;font:600 10px/16px Inter,sans-serif;color:#B91C1C;white-space:nowrap;box-shadow:0 1px 3px rgba(15,23,42,.15)">${speed}</span>
+    </div>`,
+    iconSize: [60, 56],
+    iconAnchor: [30, 16],
+  });
+
+function iconFor(c: CoolerAsset): L.DivIcon {
+  if (c.status === 'critical') {
+    const speed = `${c.speedKmh.toFixed(0)} km/h`;
+    return cachedIcon(`crit:${speed}`, () => breachIcon(speed));
+  }
+  if (c.status === 'warning' || c.isPowerCut) return cachedIcon('warn', warningIcon);
+  return cachedIcon('ok', nominalIcon);
+}
+
+// ---- Map helpers ----------------------------------------------------------------------
+
+function FitFleet({ fleet, trigger }: { fleet: CoolerAsset[]; trigger: number }) {
   const map = useMap();
-  const [lat, lng] = center;
   useEffect(() => {
-    map.flyTo([lat, lng], 12, { duration: 1.2 });
-  }, [lat, lng, map]);
+    if (trigger === 0) return;
+    const pts = fleet.map((c) => [c.lat, c.lng] as [number, number]);
+    if (pts.length > 0) map.fitBounds(L.latLngBounds(pts), { padding: [48, 48], maxZoom: 14 });
+    // fleet intentionally excluded: only refit when the user asks
+  }, [trigger, map]);
   return null;
 }
 
-export const FleetMap: React.FC<FleetMapProps> = ({
-  fleet,
-  onSelectCooler,
-  summary,
-}) => {
+// ---- Component ------------------------------------------------------------------------
+
+export const FleetMap: React.FC<FleetMapProps> = ({ fleet, onSelectCooler }) => {
   const [showGeofences, setShowGeofences] = useState(true);
-  const [mapLayer, setMapLayer] = useState<MapLayer>('vector');
-  const [searchFilter, setSearchFilter] = useState('');
+  const [layer, setLayer] = useState<MapLayer>('light');
+  const [fitTrigger, setFitTrigger] = useState(0);
 
-  const criticalCoolers = fleet.filter((c) => c.status === 'critical');
-  // Fleet is sorted by severity then risk, so this is the highest-risk active breach.
-  const criticalCooler = criticalCoolers[0];
-
-  const filteredFleet = fleet.filter((cooler) => {
-    if (!searchFilter) return true;
-    const q = searchFilter.toLowerCase();
-    return (
-      cooler.id.toLowerCase().includes(q) ||
-      cooler.retailer.toLowerCase().includes(q) ||
-      cooler.locationName.toLowerCase().includes(q)
-    );
-  });
+  const critical = fleet.filter((c) => c.status === 'critical');
+  const counts = useMemo(
+    () => ({
+      secure: fleet.filter((c) => c.status === 'nominal' && !c.isPowerCut).length,
+      power: fleet.filter((c) => c.status !== 'critical' && (c.status === 'warning' || c.isPowerCut)).length,
+      critical: critical.length,
+    }),
+    [fleet, critical.length]
+  );
+  const lead = critical[0];
 
   return (
-    <section className="bg-white rounded-xl shadow-sm border border-[#eaedff] flex flex-col overflow-hidden">
-      {/* Map Header Controls */}
-      <div className="p-4 bg-white border-b border-[#eaedff] flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <span className="w-3 h-3 rounded-full bg-[#0062a1] animate-pulse"></span>
-            <span className="text-[16px] font-bold text-[#131b2e]">
-              Harare Metro Live Telemetry Grid
-            </span>
-          </div>
-          <span className="hidden sm:inline-block px-2 py-0.5 rounded bg-[#eaedff] text-[#42474d] text-[11px] font-semibold">
-            Cluster: ZW-HRE-01
-          </span>
-        </div>
-
-        <div className="flex items-center gap-3 flex-wrap">
-          {/* Layer Switchers */}
-          <div className="inline-flex rounded-lg bg-[#f2f3ff] p-0.5 border border-[#eaedff]">
-            <button
-              onClick={() => setMapLayer('vector')}
-              className={`px-2.5 py-1 text-[11px] font-semibold rounded-md transition-all ${
-                mapLayer === 'vector'
-                  ? 'bg-white text-[#154363] shadow-sm'
-                  : 'text-[#42474d] hover:text-[#131b2e]'
-              }`}
-            >
-              Fleet Vector
-            </button>
-            <button
-              onClick={() => setMapLayer('satellite')}
-              className={`px-2.5 py-1 text-[11px] font-semibold rounded-md transition-all ${
-                mapLayer === 'satellite'
-                  ? 'bg-white text-[#154363] shadow-sm'
-                  : 'text-[#42474d] hover:text-[#131b2e]'
-              }`}
-            >
-              Satellite
-            </button>
-            <button
-              onClick={() => setMapLayer('heatmap')}
-              className={`px-2.5 py-1 text-[11px] font-semibold rounded-md transition-all ${
-                mapLayer === 'heatmap'
-                  ? 'bg-white text-[#154363] shadow-sm'
-                  : 'text-[#42474d] hover:text-[#131b2e]'
-              }`}
-            >
-              Heatmap
-            </button>
-          </div>
-
-          {/* Geofence Toggle */}
-          <label className="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-[#f2f3ff] cursor-pointer select-none border border-[#eaedff]">
-            <input
-              type="checkbox"
-              checked={showGeofences}
-              onChange={(e) => setShowGeofences(e.target.checked)}
-              className="rounded text-[#154363] w-3.5 h-3.5 cursor-pointer accent-[#154363]"
+    <Card id="live-map" className="overflow-hidden flex flex-col">
+      <CardHeader
+        title="Live map"
+        icon={MapIcon}
+        subtitle={`Harare metro · ${fleet.length} live beacons`}
+        actions={
+          <>
+            <Segmented<MapLayer>
+              label="Basemap"
+              value={layer}
+              onChange={setLayer}
+              options={[
+                { value: 'light', label: 'Light' },
+                { value: 'streets', label: 'Streets' },
+                { value: 'satellite', label: 'Satellite' },
+              ]}
             />
-            <span className="text-[11px] text-[#131b2e] font-semibold">
-              Geofence [{showGeofences ? 'ON' : 'OFF'}]
-            </span>
-          </label>
-        </div>
-      </div>
+            <label className="inline-flex items-center gap-2 h-7 px-2.5 rounded-md ring-1 ring-inset ring-slate-200 text-xs font-medium text-slate-700 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={showGeofences}
+                onChange={(e) => setShowGeofences(e.target.checked)}
+                className="h-3.5 w-3.5 accent-delta-700"
+              />
+              Geofences
+            </label>
+          </>
+        }
+      />
 
-      {/* Legend Ribbon */}
-      <div className="px-4 py-1.5 bg-[#f2f3ff] border-b border-[#eaedff] flex flex-wrap items-center justify-between gap-2 text-[#42474d] text-[11px]">
-        <div className="flex items-center gap-4 flex-wrap">
-          <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#154363]"></span>
-            <span>Compliant ({(summary?.activeCompliant ?? 0).toLocaleString()})</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#735c00]"></span>
-            <span>Unplugged / Battery ({summary?.powerOutages ?? 0})</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="relative flex h-2.5 w-2.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#ba1a1a] opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#ba1a1a]"></span>
-            </span>
-            <span className="text-[#ba1a1a] font-bold">Breach / Displacement ({summary?.anomalyAlerts ?? 0})</span>
-          </div>
-        </div>
-
-        <div className="hidden md:flex items-center gap-2 text-[#42474d]">
-          <span>
-            Accuracy: <strong className="text-[#131b2e]">±2.5m</strong>
-          </span>
-          <span>•</span>
-          <span>
-            Cell Cadence: <strong className="text-[#131b2e]">5s</strong>
-          </span>
-        </div>
-      </div>
-
-      {/* Map Canvas */}
       {/* `isolate` contains Leaflet's internal z-indexes (400+) so overlays/modals stay on top */}
-      <div className="relative isolate w-full h-[580px] overflow-hidden">
-        <MapContainer
-          center={HARARE_CENTER}
-          zoom={12}
-          scrollWheelZoom={true}
-          style={{ width: '100%', height: '100%' }}
-        >
-          <TileLayer key={mapLayer} {...TILE_LAYERS[mapLayer]} />
+      <div className="relative isolate w-full h-[560px]">
+        <MapContainer center={HARARE_CENTER} zoom={12} scrollWheelZoom style={{ width: '100%', height: '100%' }}>
+          <TileLayer key={layer} {...TILE_LAYERS[layer]} />
+          <FitFleet fleet={fleet} trigger={fitTrigger} />
 
-          {/* Recenter helper */}
-          <MapRecenter center={HARARE_CENTER} />
-
-          {/* Per-asset geofences, drawn at true radius around each store anchor */}
+          {/* Geofences at true radius around each store anchor */}
           {showGeofences &&
-            filteredFleet.map(
-              (cooler) =>
-                cooler.routeOrigin && (
+            fleet.map(
+              (c) =>
+                c.routeOrigin && (
                   <Circle
-                    key={`fence-${cooler.id}`}
-                    center={[cooler.routeOrigin.lat, cooler.routeOrigin.lng]}
-                    radius={cooler.geofenceRadiusM}
+                    key={`fence-${c.id}`}
+                    center={[c.routeOrigin.lat, c.routeOrigin.lng]}
+                    radius={c.geofenceRadiusM}
                     pathOptions={{
-                      color: cooler.status === 'critical' ? '#ba1a1a' : '#315B7C',
-                      fillColor: cooler.status === 'critical' ? '#ba1a1a' : '#315B7C',
-                      fillOpacity: 0.15,
+                      color: c.status === 'critical' ? '#DC2626' : '#123965',
+                      fillColor: c.status === 'critical' ? '#DC2626' : '#123965',
+                      fillOpacity: 0.12,
                       dashArray: '4,4',
                       weight: 1.5,
                     }}
@@ -288,112 +177,101 @@ export const FleetMap: React.FC<FleetMapProps> = ({
                 )
             )}
 
-          {/* Breach trails: anchor -> every reported fix since the incident opened */}
-          {criticalCoolers.map((cooler) => {
+          {/* Breach trails: store anchor -> every reported fix since the incident opened */}
+          {critical.map((c) => {
             const path: [number, number][] =
-              cooler.trail.length > 1
-                ? cooler.trail
-                : cooler.routeOrigin
-                ? [[cooler.routeOrigin.lat, cooler.routeOrigin.lng], [cooler.lat, cooler.lng]]
+              c.trail.length > 1
+                ? c.trail
+                : c.routeOrigin
+                ? [
+                    [c.routeOrigin.lat, c.routeOrigin.lng],
+                    [c.lat, c.lng],
+                  ]
                 : [];
             return path.length > 1 ? (
-              <Polyline
-                key={`trail-${cooler.id}`}
-                positions={path}
-                pathOptions={{ color: '#ba1a1a', weight: 3, dashArray: '6,6' }}
-              />
+              <Polyline key={`trail-${c.id}`} positions={path} pathOptions={{ color: '#DC2626', weight: 3, dashArray: '6,6' }} />
             ) : null;
           })}
 
-          {/* Render Fleet Markers */}
-          {filteredFleet.map((cooler) => {
-            let icon: L.DivIcon;
-            if (cooler.status === 'critical') {
-              icon = cachedIcon(`breach:${cooler.speedKmh.toFixed(1)}`, () =>
-                createBreachIcon(`${cooler.speedKmh.toFixed(1)} km/h`)
-              );
-            } else if (cooler.status === 'warning') {
-              icon = cachedIcon('warning', createWarningIcon);
-            } else {
-              const count = cooler.id === 'DLTA-BCN-9402' ? 42 : cooler.id === 'DLTA-BCN-3109' ? 12 : 18;
-              icon = cachedIcon(`cluster:${count}`, () => createClusterIcon(count));
-            }
-
-            return (
-              <Marker
-                key={cooler.id}
-                position={[cooler.lat, cooler.lng]}
-                icon={icon}
-                eventHandlers={{
-                  click: () => onSelectCooler(cooler),
-                }}
-              >
-                <Popup>
-                  <div className="p-1 max-w-[220px]">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="font-bold text-[12px] text-[#131b2e]">{cooler.id}</span>
-                      <span
-                        className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase ${
-                          cooler.status === 'critical'
-                            ? 'bg-[#ffdad6] text-[#ba1a1a]'
-                            : cooler.status === 'warning'
-                            ? 'bg-[#ffe088] text-[#735c00]'
-                            : 'bg-[#eaf3ea] text-[#10B981]'
-                        }`}
-                      >
-                        {cooler.statusLabel}
-                      </span>
-                    </div>
-                    <div className="text-[11px] font-semibold text-[#131b2e]">{cooler.retailer}</div>
-                    <div className="text-[10px] text-[#42474d]">{cooler.locationName}</div>
-                    <div className="grid grid-cols-2 gap-1 mt-2 text-[10px] bg-[#f2f3ff] p-1.5 rounded">
-                      <div>Temp: <strong>{cooler.internalTemp}°C</strong></div>
-                      <div>Speed: <strong>{cooler.speedKmh} km/h</strong></div>
-                      <div>Power: <strong>{cooler.batteryPct}%</strong></div>
-                      <div>Risk: <strong>{cooler.riskScore}%</strong></div>
-                    </div>
-                    <button
-                      onClick={() => onSelectCooler(cooler)}
-                      className="w-full mt-2 py-1 bg-[#154363] text-white text-[10px] font-bold rounded"
-                    >
-                      Inspect Risk Details
-                    </button>
+          {fleet.map((c) => (
+            <Marker key={c.id} position={[c.lat, c.lng]} icon={iconFor(c)} eventHandlers={{ click: () => onSelectCooler(c) }}>
+              <Popup>
+                <div className="w-56">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-semibold text-[13px] text-slate-900">{c.id}</span>
+                    <StatusBadge severity={c.status} label={c.statusLabel} />
                   </div>
-                </Popup>
-              </Marker>
-            );
-          })}
+                  <div className="mt-1 text-xs font-medium text-slate-700">{c.retailer}</div>
+                  <div className="text-xs text-slate-500">{c.locationName}</div>
+                  <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+                    <dt className="text-slate-500">Risk</dt>
+                    <dd className="text-right font-medium tabular">{c.riskScore}%</dd>
+                    <dt className="text-slate-500">Speed</dt>
+                    <dd className="text-right font-medium tabular">{c.speedKmh.toFixed(1)} km/h</dd>
+                    <dt className="text-slate-500">Cabinet</dt>
+                    <dd className="text-right font-medium tabular">{c.internalTemp.toFixed(1)}°C</dd>
+                    <dt className="text-slate-500">Power</dt>
+                    <dd className="text-right font-medium">{c.isPowerCut ? `Battery ${c.batteryPct}%` : 'Mains'}</dd>
+                  </dl>
+                  <button
+                    type="button"
+                    onClick={() => onSelectCooler(c)}
+                    className="mt-3 w-full h-8 rounded-md bg-delta-700 hover:bg-delta-800 text-white text-xs font-medium"
+                  >
+                    Open risk inspector
+                  </button>
+                </div>
+              </Popup>
+            </Marker>
+          ))}
         </MapContainer>
 
-        {/* Floating Quick Search Overlay */}
-        <div className="absolute top-4 left-4 z-[400] flex items-center gap-2">
-          <div className="relative">
-            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#42474d] text-[18px]">
-              search
-            </span>
-            <input
-              type="text"
-              placeholder="Locate Asset / Store ID..."
-              value={searchFilter}
-              onChange={(e) => setSearchFilter(e.target.value)}
-              className="w-60 h-9 pl-9 pr-3 rounded-lg bg-white/95 backdrop-blur text-[12px] text-[#131b2e] shadow-md border border-[#eaedff] placeholder:text-[#42474d] focus:outline-none focus:ring-2 focus:ring-[#0062a1] transition-all"
-            />
+        {/* Legend (counts are live beacons on this map) */}
+        <div className="absolute left-3 bottom-7 z-[500] rounded-md bg-white/95 backdrop-blur shadow-pop ring-1 ring-line px-3 py-2 text-xs text-slate-700 space-y-1">
+          <div className="flex items-center gap-2">
+            <span className="w-3 h-3 rounded-full bg-delta-700 ring-2 ring-white shadow" />
+            Secure <span className="ml-auto pl-3 tabular text-slate-500">{counts.secure}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="w-3 h-3 rounded-full bg-amber-600 ring-2 ring-white shadow" />
+            Power outage <span className="ml-auto pl-3 tabular text-slate-500">{counts.power}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="w-3 h-3 rounded-full bg-red-600 ring-2 ring-white shadow" />
+            Theft / displacement <span className="ml-auto pl-3 tabular text-slate-500">{counts.critical}</span>
           </div>
         </div>
 
-        {/* Floating Displacement Pill */}
-        {criticalCooler && (
-          <div className="absolute top-4 right-4 z-[400] bg-white/95 backdrop-blur px-3 py-1.5 rounded-full shadow-md flex items-center gap-2 border border-[#ba1a1a]/30">
-            <span className="w-2 h-2 rounded-full bg-[#ba1a1a] animate-ping"></span>
-            <span className="text-[11px] text-[#ba1a1a] font-bold">
-              +{(criticalCooler.displacementM / 1000).toFixed(1)} km displacement vector
+        {/* Fit to fleet */}
+        <button
+          type="button"
+          onClick={() => setFitTrigger((n) => n + 1)}
+          className="absolute right-3 bottom-8 z-[500] inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md bg-white shadow-pop ring-1 ring-line text-xs font-medium text-slate-700 hover:bg-slate-50"
+        >
+          <Maximize2 className="h-3.5 w-3.5" aria-hidden="true" />
+          Fit fleet
+        </button>
+
+        {/* Highest-risk active breach */}
+        {lead && (
+          <button
+            type="button"
+            onClick={() => onSelectCooler(lead)}
+            className={cx(
+              'absolute top-3 right-3 left-14 sm:left-auto z-[500] flex items-center gap-2 rounded-md bg-white/95 backdrop-blur shadow-pop ring-1 ring-red-200 px-3 py-2 text-left hover:bg-white'
+            )}
+          >
+            <ShieldAlert className="h-4 w-4 text-red-600" aria-hidden="true" />
+            <span className="text-xs">
+              <span className="font-semibold text-slate-900">{lead.id}</span>
+              <span className="text-slate-500">
+                {' '}
+                · {(lead.displacementM / 1000).toFixed(1)} km from store · {lead.speedKmh.toFixed(0)} km/h
+              </span>
             </span>
-            <span className="text-[11px] text-[#42474d]">
-              • {criticalCooler.speedKmh.toFixed(1)} km/h
-            </span>
-          </div>
+          </button>
         )}
       </div>
-    </section>
+    </Card>
   );
 };

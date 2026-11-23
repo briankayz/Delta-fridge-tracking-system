@@ -1,18 +1,29 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, ReferenceLine } from 'recharts';
 import {
-  ResponsiveContainer,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  Tooltip,
-  CartesianGrid,
-  ReferenceLine,
-} from 'recharts';
+  CircleCheck,
+  Clock,
+  Flag,
+  LucideIcon,
+  MapPinOff,
+  Moon,
+  Navigation,
+  Phone,
+  Route,
+  ShieldCheck,
+  Sparkles,
+  Thermometer,
+  Truck,
+  Unplug,
+  Vibrate,
+  X,
+  Zap,
+} from 'lucide-react';
 import { CoolerAsset, RiskReason, TrailPoint } from '../types';
 import { api } from '../services/api';
 import { formatCat, formatDuration } from '../services/useTelemetryFeed';
 import { IncidentRouteMap } from './IncidentRouteMap';
+import { Button, Card, CardHeader, Segmented, StatusBadge, STATUS_STYLE, cx } from './ui';
 
 interface RiskDetailInspectorModalProps {
   cooler: CoolerAsset | null;
@@ -24,28 +35,16 @@ interface RiskDetailInspectorModalProps {
   onCallRetailer: (assetId: string) => void;
 }
 
-const TONE = {
-  critical: { text: 'text-[#ba1a1a]', bg: 'bg-[#ba1a1a]', soft: 'bg-[#ffdad6]', hex: '#ba1a1a' },
-  warning: { text: 'text-[#735c00]', bg: 'bg-[#735c00]', soft: 'bg-[#ffe088]', hex: '#735c00' },
-  nominal: { text: 'text-[#10B981]', bg: 'bg-[#10B981]', soft: 'bg-[#eaf3ea]', hex: '#10B981' },
-} as const;
-
-const HEADLINE = {
-  critical: 'UNAUTHORIZED RELOCATION DETECTED',
-  warning: 'POWER / COLD-CHAIN WARNING',
-  nominal: 'SECURE & TRANSMITTING',
-} as const;
-
-const REASON_UI: Record<string, { icon: string; critical: boolean }> = {
-  GEOFENCE_BREACH: { icon: 'crisis_alert', critical: true },
-  GEOFENCE_DRIFT: { icon: 'wrong_location', critical: false },
-  MAINS_CUT_IN_TRANSIT: { icon: 'power_off', critical: true },
-  MAINS_OUTAGE_PROLONGED: { icon: 'power_off', critical: false },
-  MAINS_OUTAGE: { icon: 'power_off', critical: false },
-  CURFEW_MOTION: { icon: 'nightlight', critical: true },
-  MOTION: { icon: 'local_shipping', critical: false },
-  SHOCK_TILT: { icon: 'vibration', critical: false },
-  COLD_CHAIN: { icon: 'thermostat', critical: false },
+const REASON_ICON: Record<string, LucideIcon> = {
+  GEOFENCE_BREACH: MapPinOff,
+  GEOFENCE_DRIFT: Navigation,
+  MAINS_CUT_IN_TRANSIT: Unplug,
+  MAINS_OUTAGE_PROLONGED: Unplug,
+  MAINS_OUTAGE: Unplug,
+  CURFEW_MOTION: Moon,
+  MOTION: Zap,
+  SHOCK_TILT: Vibrate,
+  COLD_CHAIN: Thermometer,
 };
 
 const RANGES = { all: Infinity, '15m': 15 * 60_000, '5m': 5 * 60_000 } as const;
@@ -54,47 +53,85 @@ type Range = keyof typeof RANGES;
 const timeLabel = (iso: string) =>
   new Date(iso).toLocaleTimeString('en-GB', { timeZone: 'Africa/Harare', hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
-function summarise(cooler: CoolerAsset): { title: string; body: string } {
-  const codes = new Set(cooler.riskReasons.map((r) => r.code));
-  if (cooler.status === 'critical') {
+function headline(c: CoolerAsset): { title: string; body: string } {
+  const codes = new Set(c.riskReasons.map((r) => r.code));
+  if (c.status === 'critical') {
     const parts = [
-      codes.has('MAINS_CUT_IN_TRANSIT') && 'AC power loss',
-      (codes.has('MOTION') || codes.has('CURFEW_MOTION')) && `a vehicular motion profile (${cooler.speedKmh.toFixed(1)} km/h)`,
-      codes.has('GEOFENCE_BREACH') && 'a geofence exit',
+      codes.has('GEOFENCE_BREACH') && 'left its store geofence',
+      codes.has('MAINS_CUT_IN_TRANSIT') && 'was unplugged while moving',
+      (codes.has('MOTION') || codes.has('CURFEW_MOTION')) && `is travelling at ${c.speedKmh.toFixed(0)} km/h`,
       codes.has('CURFEW_MOTION') && 'outside trading hours',
     ].filter(Boolean);
-    return {
-      title: 'High-Confidence Theft / Unauthorized Move',
-      body: `Multi-sensor fusion detected ${parts.join(', ')}. Theft-prediction confidence ${cooler.confidencePct}%.`,
-    };
+    return { title: 'Likely theft or unauthorised move', body: `This cooler ${parts.join(', ')}.` };
   }
-  if (cooler.status === 'warning') {
-    return { title: 'Operational Risk', body: cooler.riskReasons.map((r) => r.label).join(', ') + '. No displacement detected.' };
+  if (c.status === 'warning') {
+    return { title: 'Operational risk', body: `${c.riskReasons.map((r) => r.label).join(', ')}. The cooler has not moved.` };
   }
-  return { title: 'No Anomaly Detected', body: 'Cooler is inside its geofence, on mains power and within cold-chain limits.' };
+  return { title: 'No risk detected', body: 'Inside its geofence, on mains power and within cold-chain limits.' };
 }
 
-const ReasonRow: React.FC<{ reason: RiskReason }> = ({ reason }) => {
-  const ui = REASON_UI[reason.code] ?? { icon: 'info', critical: false };
+const Fact: React.FC<{ label: string; children: React.ReactNode; tone?: string }> = ({ label, children, tone }) => (
+  <div className="rounded-lg border border-line bg-white px-4 py-3">
+    <div className="text-xs text-slate-500">{label}</div>
+    <div className={cx('mt-0.5 text-lg font-semibold tabular', tone ?? 'text-slate-900')}>{children}</div>
+  </div>
+);
+
+const ReasonRow: React.FC<{ reason: RiskReason; critical: boolean }> = ({ reason, critical }) => {
+  const Icon = REASON_ICON[reason.code] ?? Sparkles;
   return (
-    <div className="flex items-start gap-3 p-3 rounded-lg bg-white border border-[#eaedff] shadow-sm">
-      <div
-        className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
-          ui.critical ? 'bg-[#ffdad6] text-[#ba1a1a]' : 'bg-[#ffe088] text-[#735c00]'
-        }`}
+    <li className="flex items-start gap-3 py-3">
+      <span
+        className={cx(
+          'w-8 h-8 rounded-md flex items-center justify-center shrink-0',
+          critical ? 'bg-red-50 text-red-700' : 'bg-amber-50 text-amber-700'
+        )}
       >
-        <span className="material-symbols-outlined text-[16px]">{ui.icon}</span>
-      </div>
-      <div className="flex flex-col min-w-0 flex-1">
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-[12px] font-bold text-[#131b2e]">{reason.label}</span>
-          <span className="text-[10px] font-bold text-[#42474d] font-mono">+{reason.points} pts</span>
+        <Icon className="h-4 w-4" aria-hidden="true" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-baseline justify-between gap-2">
+          <span className="text-sm font-medium text-slate-900">{reason.label}</span>
+          <span className="text-xs font-medium text-slate-500 tabular">+{reason.points}</span>
         </div>
-        <span className="text-[11px] text-[#42474d]">{reason.detail}</span>
+        <p className="text-xs text-slate-600 leading-relaxed">{reason.detail}</p>
       </div>
-    </div>
+    </li>
   );
 };
+
+/** One measure per chart (no dual axes); both share the same time axis. */
+const MiniChart: React.FC<{
+  data: { time: string; value: number | null }[];
+  title: string;
+  unit: string;
+  domain: [number, number];
+  color: string;
+  marker?: string;
+}> = ({ data, title, unit, domain, color, marker }) => (
+  <div>
+    <div className="flex items-center gap-2 text-xs font-medium text-slate-700">
+      <span className="w-3 h-0.5 rounded-full" style={{ background: color }} />
+      {title} <span className="font-normal text-slate-500">({unit.trim()})</span>
+    </div>
+    <div className="h-36 mt-1">
+      <ResponsiveContainer width="100%" height="100%">
+        <LineChart data={data} margin={{ top: 8, right: 12, left: -12, bottom: 0 }}>
+          <CartesianGrid stroke="#EEF2F6" vertical={false} />
+          <XAxis dataKey="time" stroke="#94A3B8" fontSize={11} tickLine={false} axisLine={false} minTickGap={48} />
+          <YAxis domain={domain} stroke="#94A3B8" fontSize={11} tickLine={false} axisLine={false} width={40} />
+          <Tooltip
+            formatter={(v: number) => [`${v}${unit}`, title]}
+            contentStyle={{ borderRadius: 8, border: '1px solid #E2E8F0', fontSize: 12, boxShadow: '0 8px 24px -8px rgba(15,23,42,.2)' }}
+            labelStyle={{ color: '#64748B' }}
+          />
+          {marker && <ReferenceLine x={marker} stroke="#DC2626" strokeDasharray="4 4" />}
+          <Line type="monotone" dataKey="value" stroke={color} strokeWidth={2} dot={false} isAnimationActive={false} connectNulls />
+        </LineChart>
+      </ResponsiveContainer>
+    </div>
+  </div>
+);
 
 export const RiskDetailInspectorModal: React.FC<RiskDetailInspectorModalProps> = ({
   cooler,
@@ -105,14 +142,14 @@ export const RiskDetailInspectorModal: React.FC<RiskDetailInspectorModalProps> =
   onDispatch,
   onCallRetailer,
 }) => {
-  const [rangeTab, setRangeTab] = useState<Range>('all');
+  const [range, setRange] = useState<Range>('15m');
   const [history, setHistory] = useState<TrailPoint[]>([]);
   const [historyError, setHistoryError] = useState<string | null>(null);
 
   const coolerId = cooler?.id;
   const lastSeen = cooler?.lastSeen;
 
-  // Refresh history whenever a new payload for this cooler lands (throttled by payload cadence).
+  // Refresh history whenever a new payload for this cooler lands.
   useEffect(() => {
     if (!coolerId) return;
     let cancelled = false;
@@ -130,381 +167,226 @@ export const RiskDetailInspectorModal: React.FC<RiskDetailInspectorModalProps> =
     };
   }, [coolerId, lastSeen]);
 
-  // Close on Escape
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
-  const chartData = useMemo(() => {
-    const cutoff = now - RANGES[rangeTab];
-    return history
-      .filter((p) => Date.parse(p.t) >= cutoff)
-      .map((p) => ({ time: timeLabel(p.t), battery: p.battery_pct, speed: p.speed_kmh, risk: p.score }));
-  }, [history, rangeTab, now]);
+  const points = useMemo(() => {
+    const cutoff = now - RANGES[range];
+    return history.filter((p) => Date.parse(p.t) >= cutoff);
+  }, [history, range, now]);
 
   if (!cooler) return null;
 
-  const tone = TONE[cooler.status];
-  const summary = summarise(cooler);
-  const gaugeOffset = 314.16 * (1 - Math.min(100, cooler.riskScore) / 100);
+  const s = STATUS_STYLE[cooler.status];
+  const summary = headline(cooler);
   const incidentStart = cooler.incidentOpenedAt;
-  const breachLabel = incidentStart ? chartData.find((d) => d.time >= timeLabel(incidentStart))?.time : undefined;
-  const displaced = cooler.displacementM > cooler.geofenceRadiusM;
+  const breachLabel = incidentStart ? points.map((p) => timeLabel(p.t)).find((t) => t >= timeLabel(incidentStart)) : undefined;
+  const speedData = points.map((p) => ({ time: timeLabel(p.t), value: p.speed_kmh }));
+  const batteryData = points.map((p) => ({ time: timeLabel(p.t), value: p.battery_pct }));
+  const distance =
+    cooler.displacementM >= 1000 ? `${(cooler.displacementM / 1000).toFixed(2)} km` : `${Math.round(cooler.displacementM)} m`;
+  const ringOffset = 2 * Math.PI * 26 * (1 - Math.min(100, cooler.riskScore) / 100);
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm flex items-start justify-center p-3 sm:p-6 animate-fadeIn">
-      <div className="bg-white rounded-2xl shadow-2xl border border-[#eaedff] w-full max-w-[1400px] overflow-hidden my-auto flex flex-col relative">
-        {/* Top Breadcrumb & Telemetry Sync Bar */}
-        <div className="px-6 py-3.5 bg-[#f2f3ff] border-b border-[#eaedff] flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <button
-              onClick={onClose}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white shadow-sm text-[12px] font-semibold text-[#42474d] hover:text-[#154363] transition-colors border border-[#eaedff]"
-            >
-              <span className="material-symbols-outlined text-[16px]">arrow_back</span>
-              <span>Back to Dashboard</span>
-            </button>
-            <span className="text-[#42474d] text-[12px]">/</span>
-            <span className="text-[12px] font-bold text-[#131b2e]">{cooler.id}</span>
-            {cooler.incidentId && (
-              <span className="px-2 py-0.5 rounded bg-[#eaedff] text-[#42474d] text-[10px] font-bold uppercase">
-                {cooler.incidentId}
-              </span>
-            )}
-            {cooler.simulationActive && (
-              <span className="px-2 py-0.5 rounded bg-[#ffe088] text-[#735c00] text-[10px] font-bold uppercase">
-                Simulation
-              </span>
-            )}
-          </div>
+    <div className="fixed inset-0 z-50 flex justify-end" role="dialog" aria-modal="true" aria-labelledby="inspector-title">
+      <button type="button" aria-label="Close inspector" onClick={onClose} className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px]" />
 
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white shadow-sm border border-[#eaedff]">
-              <span className={`w-2 h-2 rounded-full ${tone.bg} animate-pulse`}></span>
-              <span className="text-[11px] text-[#42474d]">
-                LAST PING: <strong className="text-[#131b2e] font-bold uppercase">{cooler.lastPing}</strong>
-              </span>
-            </div>
-            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-white shadow-sm border border-[#eaedff]">
-              <span className="material-symbols-outlined text-[#0062a1] text-[16px]">
-                {cooler.isPowerCut ? 'battery_charging_20' : 'power'}
-              </span>
-              <span className="text-[11px] text-[#42474d]">
-                {cooler.isPowerCut ? 'BACKUP BATT' : 'MAINS'}:{' '}
-                <strong className={`${cooler.isPowerCut ? 'text-[#ba1a1a]' : 'text-[#131b2e]'} font-bold`}>
-                  {cooler.isPowerCut ? `${cooler.batteryPct}%` : cooler.powerSource}
-                </strong>
-              </span>
-            </div>
-            <button
-              onClick={onClose}
-              aria-label="Close inspector"
-              className="w-8 h-8 rounded-lg bg-white border border-[#eaedff] flex items-center justify-center text-[#42474d] hover:text-[#131b2e]"
-            >
-              <span className="material-symbols-outlined text-[20px]">close</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Modal Scrollable Body */}
-        {/* [&>*]:shrink-0 stops cards being squashed by the max-height scroll container */}
-        <div className="p-6 flex flex-col gap-6 max-h-[80vh] overflow-y-auto [&>*]:shrink-0">
-          {/* 1. Header Asset Card */}
-          <section className="w-full bg-white rounded-xl border border-[#eaedff] p-6 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-1.5 h-full bg-[#315B7C]"></div>
-            <div className="flex flex-col sm:flex-row sm:items-center gap-5 pl-2">
-              <div className="w-20 h-20 rounded-xl bg-[#f2f3ff] border border-[#eaedff] overflow-hidden shrink-0 shadow-sm flex items-center justify-center">
-                <span className="material-symbols-outlined text-[36px] text-[#154363]">kitchen</span>
-              </div>
-              <div className="flex flex-col gap-1 min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-[#315B7C]">
-                    ASSET TELEMETRY PROFILE
+      <div className="relative h-full w-full max-w-5xl bg-canvas shadow-2xl flex flex-col">
+        {/* Header */}
+        <header className="bg-white border-b border-line px-6 py-4">
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <StatusBadge severity={cooler.status} label={cooler.statusLabel} size="md" />
+                {cooler.incidentId && (
+                  <span className="rounded-md bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700 font-mono">
+                    {cooler.incidentId}
                   </span>
-                  <span className="text-[#c2c7ce]">•</span>
-                  <span className="text-[11px] text-[#42474d] font-mono">IMEI: {cooler.imei || '—'}</span>
-                </div>
-                <h1 className="text-[22px] font-bold text-[#131b2e] tracking-tight">Cooler ID: {cooler.id}</h1>
-                <div className="flex flex-wrap items-center gap-x-6 gap-y-1 mt-1">
-                  <div className="flex items-center gap-1.5 text-[#42474d] text-[13px]">
-                    <span className="material-symbols-outlined text-[16px] text-[#315B7C]">inventory_2</span>
-                    <span>
-                      Model: <strong className="text-[#131b2e] font-semibold">{cooler.coolerModel}</strong>
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-[#42474d] text-[13px]">
-                    <span className="material-symbols-outlined text-[16px] text-[#315B7C]">storefront</span>
-                    <span>
-                      Retailer Assigned: <strong className="text-[#131b2e] font-semibold">{cooler.retailer}</strong>
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex flex-col sm:items-end gap-2 shrink-0 pl-2 lg:pl-0">
-              <div className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full ${tone.soft} ${tone.text} shadow-sm`}>
-                <span className={`w-2.5 h-2.5 rounded-full ${tone.bg} ${cooler.status === 'critical' ? 'animate-ping' : ''}`}></span>
-                <span className="text-[11px] uppercase tracking-wider font-bold">{HEADLINE[cooler.status]}</span>
-              </div>
-              <div className="flex flex-wrap items-center gap-3 text-[12px] text-[#42474d]">
-                {incidentStart && (
-                  <>
-                    <span>
-                      Breach Detected: <strong className="text-[#131b2e]">{formatCat(incidentStart)}</strong>
-                    </span>
-                    <span>•</span>
-                  </>
                 )}
-                <span>
-                  Location: <strong className="text-[#131b2e]">{cooler.locationName}</strong>
-                </span>
+                {cooler.simulationActive && (
+                  <span className="rounded-md bg-gold-50 px-2 py-1 text-xs font-medium text-gold-700 ring-1 ring-inset ring-gold-300">
+                    Demo simulation
+                  </span>
+                )}
+              </div>
+              <h2 id="inspector-title" className="mt-2 text-xl font-semibold tracking-tight text-slate-900">
+                {cooler.id}
+              </h2>
+              <p className="text-sm text-slate-500">
+                {cooler.coolerModel} · {cooler.retailer} · IMEI <span className="font-mono">{cooler.imei || '—'}</span>
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Close"
+              className="rounded-md p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+            >
+              <X className="h-5 w-5" aria-hidden="true" />
+            </button>
+          </div>
+        </header>
+
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-6 [&>*]:shrink-0">
+          {/* Verdict + key facts */}
+          <div className="grid grid-cols-1 lg:grid-cols-[1.4fr_1fr_1fr_1fr] gap-3">
+            <div className={cx('rounded-lg border px-4 py-3 flex items-center gap-4', s.soft, 'border-line')}>
+              <svg width="64" height="64" viewBox="0 0 64 64" className="-rotate-90 shrink-0" aria-hidden="true">
+                <circle cx="32" cy="32" r="26" fill="none" stroke="#E2E8F0" strokeWidth="7" />
+                <circle
+                  cx="32"
+                  cy="32"
+                  r="26"
+                  fill="none"
+                  stroke={s.hex}
+                  strokeWidth="7"
+                  strokeLinecap="round"
+                  strokeDasharray={2 * Math.PI * 26}
+                  strokeDashoffset={ringOffset}
+                  style={{ transition: 'stroke-dashoffset 600ms ease' }}
+                />
+              </svg>
+              <div className="min-w-0">
+                <div className="text-xs text-slate-500">AI risk score</div>
+                <div className="text-2xl font-semibold text-slate-900 tabular">{cooler.riskScore}%</div>
+                <div className={cx('text-xs font-medium', s.text)}>{summary.title}</div>
               </div>
             </div>
-          </section>
+            <Fact label="Confidence">{cooler.confidencePct}%</Fact>
+            <Fact label="Distance from store" tone={cooler.isBreached ? 'text-red-700' : undefined}>
+              {distance}
+            </Fact>
+            <Fact label={incidentStart ? 'Incident open for' : 'Last report'}>
+              {incidentStart ? formatDuration(incidentStart, now) : cooler.lastPing}
+            </Fact>
+          </div>
 
-          {/* 2 & 3. Bento Grid: AI Anomaly Analysis + Displacement Map */}
-          <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
-            {/* 2. AI Anomaly Analysis Breakdown (5 cols) */}
-            <section className="xl:col-span-5 bg-gradient-to-br from-[#d0e4ff]/40 via-white to-white rounded-xl shadow-sm border border-[#eaedff] p-5 flex flex-col justify-between gap-5 relative">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="material-symbols-outlined text-[#0062a1] text-[18px]">auto_awesome</span>
-                    <span className="text-[11px] uppercase tracking-wider text-[#0062a1] font-bold">
-                      SENTINEL AI ANOMALY ENGINE
-                    </span>
-                  </div>
-                  <h2 className="text-[18px] font-bold text-[#131b2e] mt-1">Risk Assessment Breakdown</h2>
-                </div>
-                <span className={`px-2.5 py-1 rounded ${tone.bg} text-white text-[11px] font-bold uppercase tracking-wider`}>
-                  {cooler.status}
-                </span>
-              </div>
-
-              {/* Radial Risk Score Gauge */}
-              <div className="flex flex-col sm:flex-row items-center gap-5 bg-white rounded-xl p-4 shadow-sm border border-[#eaedff]">
-                <div className="relative w-28 h-28 shrink-0 flex items-center justify-center">
-                  <svg className="w-full h-full -rotate-90" viewBox="0 0 120 120">
-                    <circle className="text-[#e2e7ff]" cx="60" cy="60" fill="none" r="50" stroke="currentColor" strokeWidth="10"></circle>
-                    <circle
-                      cx="60"
-                      cy="60"
-                      fill="none"
-                      r="50"
-                      stroke={tone.hex}
-                      strokeDasharray="314.16"
-                      strokeDashoffset={gaugeOffset}
-                      strokeLinecap="round"
-                      strokeWidth="10"
-                      style={{ transition: 'stroke-dashoffset 600ms ease' }}
-                    ></circle>
-                  </svg>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-                    <span className={`text-[26px] font-bold ${tone.text} leading-none`}>{cooler.riskScore}%</span>
-                    <span className="text-[10px] text-[#42474d] uppercase font-semibold mt-1">Risk Rating</span>
-                  </div>
-                </div>
-                <div className="flex flex-col gap-1">
-                  <span className="text-[14px] font-bold text-[#131b2e]">{summary.title}</span>
-                  <p className="text-[12px] text-[#42474d] leading-relaxed">{summary.body}</p>
-                </div>
-              </div>
-
-              {/* AI Reasoning Logs */}
-              <div className="flex flex-col gap-2.5">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[#42474d]">AI REASONING LOGS</span>
+          <div className="grid grid-cols-1 xl:grid-cols-5 gap-6">
+            {/* Explanation */}
+            <Card className="xl:col-span-2">
+              <CardHeader title="Why the AI flagged this" icon={Sparkles} />
+              <div className="px-4">
+                <p className="pt-3 text-sm text-slate-700">{summary.body}</p>
                 {cooler.riskReasons.length === 0 ? (
-                  <div className="p-3 rounded-lg bg-white border border-[#eaedff] text-[11px] text-[#42474d]">
-                    No risk signals firing. All sensor channels within expected bounds.
+                  <div className="flex items-center gap-2 py-6 text-sm text-slate-600">
+                    <ShieldCheck className="h-5 w-5 text-emerald-600" aria-hidden="true" />
+                    All sensor checks are within normal limits.
                   </div>
                 ) : (
-                  cooler.riskReasons.map((r) => <ReasonRow key={r.code} reason={r} />)
+                  <ul className="divide-y divide-line">
+                    {cooler.riskReasons.map((r) => (
+                      <ReasonRow key={r.code} reason={r} critical={cooler.status === 'critical'} />
+                    ))}
+                  </ul>
                 )}
               </div>
-            </section>
-
-            {/* 3. Interactive Location History Map (7 cols) */}
-            <section className="xl:col-span-7 bg-white rounded-xl shadow-sm border border-[#eaedff] p-5 flex flex-col gap-4">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#42474d]">GPS TELEMETRY TRAIL</span>
-                  <h2 className="text-[18px] font-bold text-[#131b2e]">Location History & Displacement</h2>
-                </div>
-                <span
-                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold ${
-                    displaced ? 'bg-[#ffdad6] text-[#ba1a1a]' : 'bg-[#eaf3ea] text-[#10B981]'
-                  }`}
-                >
-                  <span className="material-symbols-outlined text-[15px]">distance</span>
-                  <span>
-                    {cooler.displacementM >= 1000
-                      ? `${(cooler.displacementM / 1000).toFixed(2)} km`
-                      : `${Math.round(cooler.displacementM)} m`}{' '}
-                    from anchor
-                  </span>
-                </span>
+              <div className="px-4 py-3 border-t border-line text-xs text-slate-500">
+                Points add up to the risk score (max 100). 75+ is critical, 40+ is a warning.
               </div>
+            </Card>
 
-              <div className="relative isolate w-full h-80 rounded-xl overflow-hidden border border-[#eaedff] shadow-inner">
+            {/* Route */}
+            <Card className="xl:col-span-3 overflow-hidden">
+              <CardHeader
+                title="Location since breach"
+                icon={Route}
+                subtitle={`${cooler.locationName} · geofence ${cooler.geofenceRadiusM} m`}
+              />
+              <div className="relative isolate h-80">
                 <IncidentRouteMap cooler={cooler} />
               </div>
-
-              {/* Map Footer Telemetry */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
-                <div className="p-3 rounded-lg bg-[#f2f3ff] flex flex-col border border-[#eaedff]">
-                  <span className="text-[10px] font-bold uppercase text-[#42474d]">ORIGIN GEOFENCE</span>
-                  <span className="text-[13px] font-semibold text-[#131b2e] mt-0.5">{cooler.geofenceRadiusM} m radius</span>
+              <dl className="grid grid-cols-3 divide-x divide-line border-t border-line text-xs">
+                <div className="px-4 py-2.5">
+                  <dt className="text-slate-500">Coordinates</dt>
+                  <dd className="font-mono text-slate-900">
+                    {cooler.lat.toFixed(5)}, {cooler.lng.toFixed(5)}
+                  </dd>
                 </div>
-                <div className="p-3 rounded-lg bg-[#f2f3ff] flex flex-col border border-[#eaedff]">
-                  <span className="text-[10px] font-bold uppercase text-[#42474d]">CURRENT COORDINATES</span>
-                  <span className="text-[13px] font-mono font-semibold text-[#131b2e] mt-0.5">
-                    {Math.abs(cooler.lat).toFixed(5)}° {cooler.lat < 0 ? 'S' : 'N'}, {Math.abs(cooler.lng).toFixed(5)}°{' '}
-                    {cooler.lng < 0 ? 'W' : 'E'}
-                  </span>
+                <div className="px-4 py-2.5">
+                  <dt className="text-slate-500">Speed</dt>
+                  <dd className="font-medium text-slate-900 tabular">{cooler.speedKmh.toFixed(1)} km/h</dd>
                 </div>
-                <div className="p-3 rounded-lg bg-[#f2f3ff] flex flex-col border border-[#eaedff]">
-                  <span className="text-[10px] font-bold uppercase text-[#42474d]">
-                    {incidentStart ? 'INCIDENT DURATION' : 'SPEED'}
-                  </span>
-                  <span className={`text-[13px] font-semibold mt-0.5 ${incidentStart ? 'text-[#ba1a1a]' : 'text-[#131b2e]'}`}>
-                    {incidentStart
-                      ? `${formatDuration(incidentStart, now)} (since ${formatCat(incidentStart)})`
-                      : `${cooler.speedKmh.toFixed(1)} km/h`}
-                  </span>
+                <div className="px-4 py-2.5">
+                  <dt className="text-slate-500">{incidentStart ? 'Breach detected' : 'Power'}</dt>
+                  <dd className="font-medium text-slate-900">
+                    {incidentStart ? formatCat(incidentStart) : cooler.isPowerCut ? `Battery ${cooler.batteryPct}%` : 'Mains'}
+                  </dd>
                 </div>
-              </div>
-            </section>
+              </dl>
+            </Card>
           </div>
 
-          {/* 4. Sensor Correlation Chart (live history from backend) */}
-          <section className="w-full bg-white rounded-xl shadow-sm border border-[#eaedff] p-5 flex flex-col gap-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[#42474d]">LIVE SENSOR CORRELATION</span>
-                <h2 className="text-[18px] font-bold text-[#131b2e]">Battery Level (%) vs. Movement Speed (km/h)</h2>
-              </div>
-              <div className="flex flex-wrap items-center gap-4">
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-3 h-1 rounded-full bg-[#0062a1]"></span>
-                    <span className="text-[11px] text-[#42474d]">Battery (%)</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-3 h-1 rounded-full bg-[#ba1a1a]"></span>
-                    <span className="text-[11px] text-[#42474d]">Speed (km/h)</span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-1 p-1 rounded-lg bg-[#f2f3ff] border border-[#eaedff]">
-                  {(Object.keys(RANGES) as Range[]).map((r) => (
-                    <button
-                      key={r}
-                      onClick={() => setRangeTab(r)}
-                      className={`px-3 py-1 rounded text-[11px] font-semibold transition-all ${
-                        rangeTab === r ? 'bg-white shadow-sm text-[#131b2e]' : 'text-[#42474d] hover:text-[#131b2e]'
-                      }`}
-                    >
-                      {r.toUpperCase()}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div className="w-full h-64 mt-2">
-              {chartData.length < 2 ? (
-                <div className="w-full h-full rounded-lg bg-[#f2f3ff] border border-dashed border-[#c2c7ce] flex items-center justify-center text-[12px] text-[#42474d]">
-                  {historyError ? `History unavailable: ${historyError}` : 'Collecting telemetry… the chart fills in as payloads arrive.'}
+          {/* Telemetry history: small multiples sharing the time axis */}
+          <Card>
+            <CardHeader
+              title="Telemetry history"
+              icon={Clock}
+              subtitle="Movement and backup battery from the same readings"
+              actions={
+                <Segmented<Range>
+                  label="Time range"
+                  value={range}
+                  onChange={setRange}
+                  options={[
+                    { value: '5m', label: '5 min' },
+                    { value: '15m', label: '15 min' },
+                    { value: 'all', label: 'Session' },
+                  ]}
+                />
+              }
+            />
+            <div className="p-4">
+              {points.length < 2 ? (
+                <div className="h-40 rounded-md bg-slate-50 border border-dashed border-slate-300 flex items-center justify-center text-sm text-slate-500">
+                  {historyError ? `History unavailable: ${historyError}` : 'Collecting readings. The charts fill in as telemetry arrives.'}
                 </div>
               ) : (
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={chartData} margin={{ top: 16, right: 30, left: 0, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e7ff" vertical={false} />
-                    <XAxis dataKey="time" stroke="#72787e" fontSize={11} minTickGap={40} />
-                    <YAxis yAxisId="left" domain={[0, 100]} stroke="#0062a1" fontSize={11} unit="%" />
-                    <YAxis yAxisId="right" orientation="right" domain={[0, 60]} stroke="#ba1a1a" fontSize={11} unit="km/h" />
-                    <Tooltip
-                      contentStyle={{ backgroundColor: '#131b2e', borderRadius: 8, color: '#ffffff', fontSize: 12, border: 'none' }}
-                    />
-                    {breachLabel && (
-                      <ReferenceLine
-                        x={breachLabel}
-                        yAxisId="right"
-                        stroke="#ba1a1a"
-                        strokeDasharray="4 4"
-                        label={{ value: 'Breach', position: 'top', fill: '#ba1a1a', fontSize: 10, fontWeight: 'bold' }}
-                      />
-                    )}
-                    <Line
-                      yAxisId="left"
-                      type="monotone"
-                      dataKey="battery"
-                      stroke="#0062a1"
-                      strokeWidth={2.5}
-                      dot={false}
-                      isAnimationActive={false}
-                      name="Battery Level (%)"
-                    />
-                    <Line
-                      yAxisId="right"
-                      type="monotone"
-                      dataKey="speed"
-                      stroke="#ba1a1a"
-                      strokeWidth={2.5}
-                      dot={false}
-                      isAnimationActive={false}
-                      name="Velocity (km/h)"
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <MiniChart data={speedData} title="Speed" unit=" km/h" domain={[0, 60]} color="#DC2626" marker={breachLabel} />
+                  <MiniChart data={batteryData} title="Backup battery" unit="%" domain={[0, 100]} color="#123965" marker={breachLabel} />
+                </div>
               )}
             </div>
-          </section>
+          </Card>
         </div>
 
-        {/* 5. Fixed Bottom Action Bar */}
-        <div className="bg-[#f2f3ff] border-t border-[#eaedff] px-6 py-3.5 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2 text-[#42474d] text-[12px]">
-            <span className={`material-symbols-outlined ${tone.text} text-[18px]`}>gavel</span>
+        {/* Actions */}
+        <footer className="bg-white border-t border-line px-6 py-3 flex flex-wrap items-center justify-between gap-3">
+          <div className="text-xs text-slate-500">
             {cooler.incidentId ? (
-              <span>
-                Incident <strong className="text-[#131b2e]">{cooler.incidentId}</strong> • Open for{' '}
-                <strong className="text-[#ba1a1a]">{formatDuration(incidentStart, now)}</strong>
-              </span>
+              <>
+                Incident <span className="font-mono text-slate-700">{cooler.incidentId}</span> opened {formatCat(incidentStart)}
+              </>
             ) : (
-              <span>No open incident for this asset</span>
+              <span className="inline-flex items-center gap-1.5">
+                <CircleCheck className="h-3.5 w-3.5 text-emerald-600" aria-hidden="true" />
+                No open incident
+              </span>
             )}
           </div>
-
-          <div className="flex flex-wrap items-center justify-end gap-2.5 w-full sm:w-auto">
-            <button
-              onClick={() => onAuthorizeMove(cooler.id)}
-              disabled={!cooler.incidentId}
-              className="px-4 py-2 rounded-lg bg-white border border-[#eaedff] hover:bg-[#eaedff] text-[#131b2e] text-[12px] font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              Mark as Authorized Move
-            </button>
-            <button
-              onClick={() => onCallRetailer(cooler.id)}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#0062a1] text-white hover:bg-[#00497b] text-[12px] font-semibold shadow-sm transition-colors"
-            >
-              <span className="material-symbols-outlined text-[16px]">call</span>
-              <span>Call Retailer</span>
-            </button>
-            <button
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={() => onAuthorizeMove(cooler.id)} disabled={!cooler.incidentId}>
+              Mark as authorised move
+            </Button>
+            <Button icon={Phone} onClick={() => onCallRetailer(cooler.id)}>
+              Call retailer
+            </Button>
+            <Button
+              variant="danger"
+              icon={cooler.incidentId ? Truck : Flag}
               onClick={() => {
                 onDispatch(cooler.id);
-                onActionFeedback(`Repossession team flagged for ${cooler.id} near ${cooler.locationName}.`);
+                onActionFeedback(`Recovery team flagged for ${cooler.id} near ${cooler.locationName}.`);
               }}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#ba1a1a] text-white hover:bg-[#93000a] text-[12px] font-bold shadow-md transition-colors"
             >
-              <span className="material-symbols-outlined text-[16px]">flag</span>
-              <span>Flag for Repossession Team</span>
-            </button>
+              Dispatch recovery team
+            </Button>
           </div>
-        </div>
+        </footer>
       </div>
     </div>
   );
