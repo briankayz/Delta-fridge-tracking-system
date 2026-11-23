@@ -118,3 +118,8 @@ export const RegisterImportSchema = z.object({
   rows: z.array(z.record(z.string(), z.unknown())).max(20_000).optional(),
   dry_run: z.boolean().optional(),
 });
+
+export const ChangePasswordSchema = z.object({
+  current_password: z.string().min(1).max(200),
+  new_password: z.string().min(10).max(200),
+});

@@ -6,3 +6,4 @@ dist/
 *.log
 /0.26.0
 backend/data/
+deploy.env

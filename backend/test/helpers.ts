@@ -1,4 +1,5 @@
 import { AddressInfo } from 'node:net';
+import pg from 'pg';
 import { createApp } from '../src/app.ts';
 import { loadConfig, Config } from '../src/config.ts';
 import { TelemetryPayload } from '../src/schema.ts';
@@ -6,8 +7,25 @@ import { TelemetryPayload } from '../src/schema.ts';
 export const PASSWORD = 'Test-Password-123';
 
 /** A fresh in-memory PostgreSQL + API for each test file. */
+/**
+ * With TEST_DATABASE_URL set, each test file runs in its own schema on a real PostgreSQL server
+ * (used in CI); otherwise an in-memory embedded PostgreSQL is used.
+ */
+async function testDatabaseUrl(): Promise<string | undefined> {
+  const url = process.env.TEST_DATABASE_URL;
+  if (!url) return undefined;
+  const schema = `t_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+  const admin = new pg.Client({ connectionString: url });
+  await admin.connect();
+  await admin.query(`CREATE SCHEMA ${schema}`);
+  await admin.end();
+  return `${url}${url.includes('?') ? '&' : '?'}options=${encodeURIComponent(`-c search_path=${schema}`)}`;
+}
+
 export async function startTestApp(overrides: Partial<Config> = {}, now?: () => Date) {
+  const databaseUrl = await testDatabaseUrl();
   const cfg = loadConfig({ NODE_ENV: 'test' } as NodeJS.ProcessEnv, {
+    databaseUrl,
     dataDir: 'memory://',
     jwtSecret: 'test-secret-test-secret-test-secret-123',
     demoMode: true,

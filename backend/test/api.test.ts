@@ -167,3 +167,25 @@ test('audit trail, CSV export, reports and demo controls', async () => {
   assert.equal(after.body.asset.risk.severity, 'nominal');
   assert.equal(after.body.asset.open_incidents.filter((i: any) => i.kind === 'displacement').length, 0);
 });
+
+test('self-service password change signs out other sessions', async () => {
+  const email = 'viewer@test.local';
+  const other = await t.login(email);
+  const mine = await t.login(email);
+  assert.equal((await t.call('POST', '/api/v1/auth/change-password', { current_password: 'wrong', new_password: 'Another-Pass-456' }, mine)).status, 400);
+  assert.equal((await t.call('POST', '/api/v1/auth/change-password', { current_password: PASSWORD, new_password: 'short' }, mine)).status, 400);
+  const ok = await t.call('POST', '/api/v1/auth/change-password', { current_password: PASSWORD, new_password: 'Another-Pass-456' }, mine);
+  assert.equal(ok.status, 200);
+  assert.equal((await t.call('GET', '/api/v1/auth/me', undefined, other)).status, 401);
+  assert.equal((await t.call('GET', '/api/v1/auth/me', undefined, ok.body.token)).status, 200);
+  assert.equal((await t.call('POST', '/api/v1/auth/login', { email, password: 'Another-Pass-456' })).status, 200);
+});
+
+test('serves the built dashboard with a strict CSP when present', async () => {
+  const res = await fetch(`${t.base}/incidents/INC-1`);
+  if (!t.cfg.webDist || res.status === 404) return; // web app not built in this checkout
+  assert.equal(res.status, 200);
+  assert.match(await res.text(), /<div id="root">/);
+  assert.match(res.headers.get('content-security-policy') ?? '', /frame-ancestors 'none'/);
+  assert.equal((await fetch(`${t.base}/api/v1/nope`)).status, 404);
+});

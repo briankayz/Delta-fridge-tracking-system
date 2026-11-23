@@ -1,66 +1,76 @@
-# Delta Asset Guard AI
+# Delta Asset Guard
 
-IoT telemetry and AI risk-scoring prototype for Delta Beverages (Zimbabwe) commercial display coolers.
+Trade-cooler protection platform for Delta Beverages: every cooler's location, power and theft risk,
+with a clear, audited response workflow from the control room to the field.
 
-| Folder | What it is |
-|---|---|
-| `backend/` | Node + TypeScript telemetry ingest, rule-based risk engine, incident tracking, WebSocket hub |
-| `web-admin/` | Fleet Telemetry & Risk Command Center (React + Vite + Leaflet) — "Phone B / Laptop" |
-| `mobile-beacon/` | Beacon node simulator (Expo / React Native) — "Phone A", mounted in the fridge |
-| `stitch_delta_app designs/` | Original UI design references |
+| Part | For | What it is |
+|---|---|---|
+| [`backend/`](backend) | everyone | Node 22 + TypeScript API, PostgreSQL, risk engine, incidents, notifications, audit, WebSocket hub |
+| [`web-admin/`](web-admin) | control room, managers, admins | Command centre, incidents, cooler register, relocations, reports, users & audit |
+| [`mobile-beacon/`](mobile-beacon) | field staff | Expo app: Respond to alerts, Install beacons, Check a cooler (plus a demo beacon mode) |
+| [`docs/`](docs) | IT & operations | [Operations & security](docs/OPERATIONS.md), [beacon hardware spec](docs/HARDWARE.md) |
 
-API contract and risk-scoring rules are documented in [`CLAUDE.md`](claude.md).
+Rules for contributors, the API contract and the risk model are in [`CLAUDE.md`](claude.md).
 
-## Run it
+## Quick start (development, demo data)
 
-Requires Node 20+.
+Requires Node 22.12+.
 
 ```bash
-# 1. Backend (port 8787)
-cd backend
-npm install
-npm run dev          # prints the LAN URL, e.g. http://192.168.1.20:8787
-
-# 2. Dashboard (port 5173)
-cd web-admin
-npm install
-npm run dev          # open http://localhost:5173, or http://<laptop-ip>:5173 from Phone B
-
-# 3. Beacon (Phone A, Expo Go)
-cd mobile-beacon
-npm install
-npx expo start       # scan the QR code with Expo Go
+cd backend && cp .env.example .env && npm install && npm run dev     # API on :8787, demo data seeded
+cd web-admin && npm install && npm run dev                           # dashboard on http://localhost:5173
+cd mobile-beacon && npm install && npx expo start                    # field app (Expo Go, same Wi-Fi)
 ```
 
-The dashboard and beacon find the backend automatically (same host / Expo dev host, port 8787).
-Override with `VITE_API_URL=http://<ip>:8787` (dashboard) or `EXPO_PUBLIC_API_URL=http://<ip>:8787` (beacon).
+The embedded PostgreSQL stores data in `backend/data/` (delete it to start over). Demo sign-ins
+(password = `DEMO_PASSWORD` in `backend/.env`):
 
-### Two-device demo checklist
-1. Laptop, Phone A and Phone B on the **same Wi-Fi**.
-2. Allow inbound TCP **8787** and **5173** in Windows Defender Firewall (Private network). In an admin PowerShell:
-   ```powershell
-   New-NetFirewallRule -DisplayName "Delta Asset Guard" -Direction Inbound -Protocol TCP -LocalPort 8787,5173 -Action Allow -Profile Private
-   ```
-3. On Phone A, the provisioning screen shows `Backend connected • http://<ip>:8787`. Tap **Lock & Start Sentinel Tracker**.
-4. Tap **Simulate Displacement Event** on Phone A. Within ~1 s the dashboard shows the red breach pin and trail,
-   KPIs move by one, the alert appears in the AI Risk Radar, and the Risk Inspector opens with the AI reasoning.
-5. Enter a supervisor PIN on Phone A (any 4+ digits) — or click **Mark as Authorized Move** on the dashboard — to close the incident.
+| Email | Role |
+|---|---|
+| ops@delta.demo | Operations lead |
+| security@delta.demo | Asset Protection |
+| north.manager@delta.demo | Area manager (Harare North only) |
+| tech@delta.demo | Field technician |
+| admin@delta.demo | Administrator |
 
-No phone handy? The dashboard's **Simulate Beacon Ingest** button runs the same breach server-side.
+### Five-minute demo
 
-### Useful environment variables (backend)
-| Variable | Default | Effect |
-|---|---|---|
-| `PORT` | `8787` | Listen port |
-| `INGEST_TOKEN` | unset | If set, `POST /api/v1/telemetry` requires header `x-device-token` (set `EXPO_PUBLIC_DEVICE_TOKEN` on the beacon) |
-| `DEMO_FORCE_CURFEW` | unset | `1` = treat all hours as after-hours (shows the night-time velocity rule during a daytime demo) |
+1. Dashboard: sign in as `ops@delta.demo`. The command centre shows 37 coolers (36 virtual demo coolers marked *Demo* + Phone A's), one stolen cooler and one long power outage.
+2. Phone A: sign in as `tech@delta.demo` → **Install** → type `DLTA-BCN-9042` → *OK Supermarket - Avondale* → *Small · 50 m* → "This cooler is now protected".
+3. Phone A: **More → Use this phone as the beacon → DLTA-BCN-9042 → Simulate theft**.
+4. Dashboard: a theft alert opens within seconds; the Risk Inspector pops up with the AI's reasons and the route. Click **Acknowledge** and **Dispatch team**.
+5. Phone B: sign in as `security@delta.demo` → **Respond** → the alert is at the top (nearest) → **Directions** → **Cooler recovered**.
+6. Dashboard: the incident closes with the full timeline; **Reports** and **Users & audit** show the record.
+
+No phone? Use the dashboard's **Demo: simulate theft** button.
+
+## Deploy
+
+```bash
+cp deploy.env.example deploy.env        # set POSTGRES_PASSWORD, JWT_SECRET, ADMIN_EMAIL, ADMIN_PASSWORD
+docker compose --env-file deploy.env up -d --build
+```
+
+One container serves the API, WebSocket and dashboard on port 8787, backed by PostgreSQL 16. Put TLS in
+front of it. Details, backups, security model and production checklist: [docs/OPERATIONS.md](docs/OPERATIONS.md).
+
+Then: sign in as the admin → **Users & audit** → create staff accounts → **Cooler register** → import
+Delta's cooler list (CSV template provided) → technicians install beacons from the field app.
 
 ## Tests
+
 ```bash
-cd backend && npm test       # risk engine, incident state machine, HTTP + WebSocket API
+cd backend && npm test          # 31 tests: risk engine, incident state machine, API, auth, roles, regions
+cd backend && npm run test:pg   # same suite through the node-postgres driver (wire protocol)
 ```
 
-## Prototype limits
-- State is in memory; restarting the backend reseeds the demo fleet.
-- No operator authentication; intended for a trusted LAN demo.
-- The 1,420-cooler KPI baseline is seeded; only the six demo beacons are tracked live and move those numbers.
+CI (`.github/workflows/ci.yml`) also runs the suite against a real PostgreSQL 16 server, builds the
+dashboard, type-checks the field app and builds the Docker image.
+
+## What is still a prototype
+
+- **Beacon hardware.** The phone demo cannot measure mains voltage or cabinet temperature; production needs the in-fridge unit in [docs/HARDWARE.md](docs/HARDWARE.md).
+- **Single sign-on.** Accounts are local (scrypt, revocable sessions). Microsoft Entra ID / SAML would replace the login screen for Delta staff.
+- **Push notifications** on phones need production app builds with FCM/APNs credentials; SMS/WhatsApp work today via Twilio settings.
+- **ERP integration.** The cooler register is imported by CSV; a scheduled sync from Delta's asset system (e.g. SAP) is the next step.
+- **Scale.** Tested with dozens of live beacons; for 10,000+ coolers add map clustering, time-series partitioning (TimescaleDB) and a second app instance with a shared WebSocket bus.

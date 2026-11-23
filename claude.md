@@ -58,30 +58,67 @@ Strictly adhere to the following styling tokens across all generated UI componen
 
 ---
 
-## Backend & Integration Contract (implemented)
+## Platform architecture (current)
 
-### Topology & ports
-- `backend/` — Node 22 + TypeScript (Express, `ws`, `zod`). Default port **8787** (8080 is taken by Apache on the dev laptop). One port serves HTTP and the WebSocket.
-- `web-admin/` — Vite on 5173. Talks to `http://<same host>:8787` unless `VITE_API_URL` is set.
-- `mobile-beacon/` — Expo. Talks to `http://<Metro host IP>:8787` (from Expo `hostUri`) unless `EXPO_PUBLIC_API_URL` is set.
+```
+In-fridge beacon (hardware, or the field app in Demo mode)
+        │  POST /api/v1/telemetry   Authorization: Device <token>
+        ▼
+backend/  Node 22 + TypeScript · Express · ws · zod · PostgreSQL (DATABASE_URL) or embedded PGlite
+        │  risk engine → incidents → notifications → audit log
+        ├── WS /ws/telemetry (session-authenticated, region-scoped)  ──►  web-admin/ (React + Vite + Leaflet)
+        └── REST /api/v1 (Bearer token)                              ──►  mobile-beacon/ (Expo field app)
+```
 
-### API
-| Method | Path | Notes |
+Production is one deployable: the backend serves the built dashboard (`WEB_DIST`). See `Dockerfile`, `docker-compose.yml`, `docs/OPERATIONS.md`.
+
+## Rules for changes
+
+- **The server owns risk.** Device-sent `risk_score_pct`, `geofence_breached`, `displacement_distance_m` are ignored and recomputed.
+- **No invented numbers in the UI.** Every figure comes from the cooler register or live telemetry. Demo data is flagged `is_virtual` and labelled "Demo".
+- **Every write is audited** (`audit_log`) and every incident action is on its timeline (`incident_events`).
+- **Permissions are enforced server-side** (`backend/src/auth/security.ts`); the UI only hides what the role can't do. Users with a region only see that region.
+- Schema changes: append a new entry to `backend/src/db/migrations.ts`; never edit an applied one.
+- Map tiles must be keyless (OSM standard, Esri imagery / light-grey canvas). **Never CARTO** (watermarks without a key).
+- Field app: plain words, one status per screen, 52dp+ touch targets, strings in `mobile-beacon/src/i18n.ts`.
+
+## Roles
+
+| Role | Can |
+|---|---|
+| admin | everything, incl. users |
+| ops_lead | all incidents, register import, approve relocations, audit, demo controls |
+| area_manager | incidents and relocation requests in their region |
+| asset_protection | acknowledge, assign, dispatch, resolve, field reports |
+| technician | install beacons, field reports, relocation requests |
+| viewer | read-only |
+
+## API (v2)
+
+Auth: `POST /api/v1/auth/login` → `{ user, permissions, token }` + httpOnly `dag_session` cookie. Web uses the cookie (same origin); mobile sends `Authorization: Bearer <token>`. `GET /auth/me`, `POST /auth/logout`, `POST /auth/change-password`.
+
+| Method | Path | Permission |
 |---|---|---|
-| POST | `/api/v1/telemetry` | `FridgeTelemetryPayload` (see `mobile-beacon/src/types/telemetry.ts`, validated by `backend/src/schema.ts`). Returns 202 with `risk_score_pct`, `theft_prediction_confidence_pct`, `severity`, `reasons[]`, `incident_id`. Optional `x-device-token` when `INGEST_TOKEN` is set. |
-| GET | `/api/v1/assets` | `{ summary, assets: AssetState[], incidents }` |
-| GET | `/api/v1/assets/:id` | `{ asset, history, incident }` |
-| POST | `/api/v1/assets/:id/simulate-breach` | Server-side 1 Hz breach stream (works without Phone A). Device payloads for that asset are ignored while it runs. |
-| POST | `/api/v1/assets/:id/provision` | `{ anchor_lat, anchor_lng, geofence_radius_m?, retailer_id?, retailer_name?, open_hour?, close_hour? }` |
-| POST | `/api/v1/assets/:id/reset` | `{ resolution?: 'authorized' \| 'reset' }` — closes the incident, snaps to anchor. |
-| WS | `/ws/telemetry` | Server → client events: `snapshot`, `asset.updated`, `incident.opened` (once per incident), `incident.resolved`. Every event carries `summary`. |
+| POST | `/api/v1/telemetry` | device token (`Authorization: Device …`) |
+| GET | `/api/v1/summary`, `/assets`, `/assets/:id`, `/retailers`, `/incidents`, `/incidents/:id`, `/incidents/export.csv`, `/relocations`, `/reports/summary`, `/register/template.csv` | fleet:read |
+| POST | `/api/v1/assets/:id/provision` → `{ asset, device_token }` | asset:provision |
+| POST | `/api/v1/incidents/:id/acknowledge` · `/assign` · `/dispatch` · `/resolve` | incident:act |
+| POST | `/api/v1/incidents/:id/notes` · `/field-update` (`found` / `not_found` / `recovered` / `authorized`) | incident:field |
+| POST | `/api/v1/relocations` | relocation:request |
+| POST | `/api/v1/relocations/:id/decision` | relocation:decide |
+| POST | `/api/v1/register/import` (`{ csv, dry_run }`) | register:import |
+| GET/POST/PATCH | `/api/v1/users`, `/users/:id` | user:manage |
+| GET | `/api/v1/users/assignable` | incident:act |
+| GET | `/api/v1/audit`, `/notifications` | audit:read |
+| POST | `/api/v1/assets/:id/simulate-breach`, `/demo-reset` | demo:control + `DEMO_MODE=1` |
+| WS | `/ws/telemetry` (cookie or `?token=`) | any signed-in user; events: `snapshot`, `asset.updated`, `incident.opened`, `incident.updated`, `incident.resolved` (each with region-scoped `summary`) |
 
-### Rules
-- **The server owns risk.** Client-sent `risk_score_pct`, `geofence_breached`, `displacement_distance_m` are ignored and recomputed.
-- KPI counters, toasts, row flashes and the auto-opening Risk Inspector react to `incident.opened` only — never to individual payloads.
-- Map tiles must be keyless: OpenStreetMap standard, Esri World Imagery, Esri Light Gray Canvas. **Do not use CARTO basemaps** — they now return an "API KEY REQUIRED" watermark tile.
+## Incidents
 
-### AI risk scoring heuristic (`backend/src/riskEngine.ts`)
+Kinds: `displacement` (opens at risk ≥ 75, auto-resolves after 3 calm payloads at home), `power` (prolonged outage ≥ 2 h, resolves when mains return), `signal_lost` (no report for `OFFLINE_AFTER_MIN`, critical if it went silent mid-breach; resolves when reporting resumes). Status: `open` → `acknowledged` → `resolved` with a resolution. Resolving a displacement as `authorized` re-anchors the geofence at the cooler's current position. Approved relocations cap risk below critical during their window and re-anchor on arrival.
+
+## AI risk scoring heuristic (`backend/src/riskEngine.ts`)
+
 | Signal | Condition | Points |
 |---|---|---|
 | Geofence | `r < d ≤ 2r` (drift) | 20 |
@@ -93,5 +130,6 @@ Strictly adhere to the following styling tokens across all generated UI componen
 | | ≥ 5 km/h in curfew (default 22:00–07:00 CAT) | 20 |
 | Shock/tilt | MPU-6050 `Elevated` or tilt > 10° | 5 |
 | Cold chain | internal temp > target max | 5 |
+| Approved relocation | active window | caps score at 74 (shown as negative points) |
 
-Capped at 100. Severity: ≥ 75 critical (opens incident), ≥ 40 warning, else nominal. Confidence = 0 below 40, else min(99, 50 + 12.5 × firing families [geofence, power, velocity, shock]). An incident auto-resolves after 3 consecutive payloads inside the fence at < 2 km/h. `DEMO_FORCE_CURFEW=1` treats all hours as curfew.
+Capped at 100. Severity: ≥ 75 critical, ≥ 40 warning, else nominal. Confidence = 0 below 40, else min(99, round(50 + 12.5 × firing families [geofence, power, velocity, shock])).

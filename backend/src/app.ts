@@ -1,5 +1,7 @@
 // HTTP API + WebSocket hub. createApp() wires services together; server.ts adds listen/timers.
+import fs from 'node:fs';
 import http from 'node:http';
+import path from 'node:path';
 import cors from 'cors';
 import helmet from 'helmet';
 import express, { NextFunction, Request, Response } from 'express';
@@ -19,6 +21,7 @@ import {
 } from './auth/security.ts';
 import {
   AssignSchema,
+  ChangePasswordSchema,
   DecisionSchema,
   DispatchSchema,
   FieldUpdateSchema,
@@ -97,7 +100,23 @@ export async function createApp(opts: AppOptions) {
   const app = express();
   app.disable('x-powered-by');
   app.set('trust proxy', 'loopback, linklocal, uniquelocal');
-  app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
+  app.use(
+    helmet({
+      crossOriginResourcePolicy: { policy: 'cross-origin' },
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          scriptSrc: ["'self'"],
+          styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com', 'https://unpkg.com'],
+          fontSrc: ["'self'", 'https://fonts.gstatic.com'],
+          imgSrc: ["'self'", 'data:', 'https://tile.openstreetmap.org', 'https://server.arcgisonline.com', 'https://unpkg.com'],
+          connectSrc: ["'self'", 'ws:', 'wss:'],
+          frameAncestors: ["'none'"],
+          objectSrc: ["'none'"],
+        },
+      },
+    })
+  );
   app.use(cors({ origin: cfg.corsOrigins.length ? cfg.corsOrigins : false, credentials: true }));
   app.use(express.json({ limit: '6mb' }));
   app.use((req, res, next) => {
@@ -191,6 +210,15 @@ export async function createApp(opts: AppOptions) {
   app.get('/api/v1/auth/me', requireUser(), (req, res) => {
     res.json({ user: req.user, permissions: permissionsFor(req.user!.role) });
   });
+
+  app.post('/api/v1/auth/change-password', requireUser(), h(async (req, res) => {
+    const body = parse(ChangePasswordSchema, req.body);
+    const u = await users.changeOwnPassword(req.user!.id, body.current_password, body.new_password, req.ip);
+    // Other sessions are revoked; issue a fresh one for this device.
+    const token = await signSession(u, cfg.jwtSecret, cfg.sessionHours);
+    res.cookie(SESSION_COOKIE, token, { httpOnly: true, sameSite: 'lax', secure: cfg.env === 'production', maxAge: cfg.sessionHours * 3_600_000, path: '/' });
+    res.json({ ok: true, token });
+  }));
 
   // ---- device ingest ------------------------------------------------------------------------------
   app.post('/api/v1/telemetry', h(async (req, res) => {
@@ -436,6 +464,17 @@ export async function createApp(opts: AppOptions) {
     );
     res.json({ days, since, regions: byRegion });
   }));
+
+  // ---- web dashboard (production: one deployable serves API + UI on the same origin) -----------------------------
+  if (cfg.webDist && fs.existsSync(path.join(cfg.webDist, 'index.html'))) {
+    app.use(express.static(cfg.webDist, { index: false, maxAge: '1h', setHeaders: (res, file) => {
+      if (file.includes(`${path.sep}assets${path.sep}`)) res.setHeader('cache-control', 'public, max-age=31536000, immutable');
+    } }));
+    app.get(/^\/(?!api\/|ws\/|health).*/, (_req, res) => {
+      res.setHeader('cache-control', 'no-cache');
+      res.sendFile(path.join(cfg.webDist!, 'index.html'));
+    });
+  }
 
   // ---- errors --------------------------------------------------------------------------------------------------
   app.use('/api', (_req, res) => res.status(404).json({ error: 'Not found' }));

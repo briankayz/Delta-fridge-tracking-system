@@ -2,6 +2,8 @@
 //   - PostgreSQL server (DATABASE_URL set)  -> node-postgres pool
 //   - embedded PostgreSQL (PGlite, WASM)    -> zero-setup local/dev/test
 import { PGlite, types } from '@electric-sql/pglite';
+import fs from 'node:fs';
+import path from 'node:path';
 import pg from 'pg';
 import { MIGRATIONS } from './migrations.ts';
 
@@ -38,7 +40,7 @@ function wrap(run: (sql: string, params: unknown[]) => Promise<{ rows: unknown[]
 export async function openDb(opts: { databaseUrl?: string; dataDir: string }): Promise<Db> {
   let db: Db;
   if (opts.databaseUrl) {
-    const pool = new pg.Pool({ connectionString: opts.databaseUrl, max: 10 });
+    const pool = new pg.Pool({ connectionString: opts.databaseUrl, max: Number(process.env.DB_POOL_MAX ?? 10) });
     // timestamptz -> ISO string, int8 -> number (counts / ids fit in 2^53)
     pg.types.setTypeParser(1184, (v) => new Date(v).toISOString());
     pg.types.setTypeParser(20, (v) => Number(v));
@@ -63,6 +65,7 @@ export async function openDb(opts: { databaseUrl?: string; dataDir: string }): P
       close: () => pool.end(),
     };
   } else {
+    if (opts.dataDir !== 'memory://') fs.mkdirSync(path.dirname(path.resolve(opts.dataDir)), { recursive: true });
     const lite = new PGlite(opts.dataDir === 'memory://' ? undefined : opts.dataDir);
     await lite.waitReady;
     // PGlite only honours parsers per query (constructor-level timestamptz parsers are ignored).

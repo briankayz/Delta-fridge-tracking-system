@@ -131,6 +131,8 @@ export const api = {
   login: (email: string, password: string) =>
     post<{ user: AuthUser; permissions: Permission[] }>('/api/v1/auth/login', { email, password }),
   logout: () => post<{ ok: boolean }>('/api/v1/auth/logout'),
+  changePassword: (current_password: string, new_password: string) =>
+    post<{ ok: boolean }>('/api/v1/auth/change-password', { current_password, new_password }),
 
   getAsset: (id: string) =>
     request<{ asset: AssetState; history: TrailPoint[]; incident: Incident | null; incidents: Incident[] }>(

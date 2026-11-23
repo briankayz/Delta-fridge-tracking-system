@@ -21,6 +21,8 @@ export interface Config {
   /** A beacon silent for this long is "offline" and raises a signal-lost incident. */
   offlineAfterMin: number;
   telemetryRetentionDays: number;
+  /** Built web dashboard to serve (production). */
+  webDist?: string;
   adminEmail?: string;
   adminPassword?: string;
   notify: {
@@ -67,6 +69,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env, overrides: Part
     forceCurfew: env.DEMO_FORCE_CURFEW === '1',
     offlineAfterMin: Number(env.OFFLINE_AFTER_MIN ?? 15),
     telemetryRetentionDays: Number(env.TELEMETRY_RETENTION_DAYS ?? 90),
+    webDist: env.WEB_DIST ?? path.resolve('../web-admin/dist'),
     adminEmail: env.ADMIN_EMAIL || undefined,
     adminPassword: env.ADMIN_PASSWORD || undefined,
     notify: {
@@ -78,5 +81,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env, overrides: Part
     },
     ...overrides,
   };
+  if (cfg.env === 'production') {
+    if (cfg.demoMode) console.warn('WARNING: DEMO_MODE=1 in production. Demo users, virtual coolers and simulation controls are enabled.');
+    if (!cfg.databaseUrl) console.warn('WARNING: no DATABASE_URL in production; using the embedded database in ' + cfg.dataDir);
+  }
   return cfg;
 }

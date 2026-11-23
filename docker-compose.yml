@@ -1,0 +1,46 @@
+# Production-style stack: PostgreSQL 16 + Delta Asset Guard (API, WebSocket, dashboard).
+# 1. cp deploy.env.example deploy.env   and fill in the secrets
+# 2. docker compose --env-file deploy.env up -d --build
+# 3. open http://<server>:8787 and sign in with ADMIN_EMAIL / ADMIN_PASSWORD
+# Put TLS in front (reverse proxy / load balancer) before exposing it beyond a private network.
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: delta_asset_guard
+      POSTGRES_USER: delta
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in deploy.env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U delta -d delta_asset_guard']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - '${APP_PORT:-8787}:8787'
+    environment:
+      DATABASE_URL: postgres://delta:${POSTGRES_PASSWORD}@db:5432/delta_asset_guard
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET (32+ random characters) in deploy.env}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      DEMO_MODE: ${DEMO_MODE:-0}
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
+      OFFLINE_AFTER_MIN: ${OFFLINE_AFTER_MIN:-15}
+      TELEMETRY_RETENTION_DAYS: ${TELEMETRY_RETENTION_DAYS:-90}
+      NOTIFY_WEBHOOK_URL: ${NOTIFY_WEBHOOK_URL:-}
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
+      TWILIO_SMS_FROM: ${TWILIO_SMS_FROM:-}
+      TWILIO_WHATSAPP_FROM: ${TWILIO_WHATSAPP_FROM:-}
+
+volumes:
+  pgdata:

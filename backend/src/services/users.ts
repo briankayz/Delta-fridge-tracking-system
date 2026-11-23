@@ -91,6 +91,22 @@ export class UserService {
     return row as AuthUser & { token_version: number; active: boolean };
   }
 
+  /** Self-service password change; bumps token_version so other sessions are signed out. */
+  async changeOwnPassword(id: string, current: string, next: string, ip?: string) {
+    const problem = passwordProblem(next);
+    if (problem) throw new HttpError(400, problem);
+    const row = await this.db.one<Record<string, any>>('SELECT * FROM users WHERE id = $1 AND active', [id]);
+    if (!row || !(await verifyPassword(current, row.password_hash))) throw new HttpError(400, 'Current password is incorrect');
+    if (current === next) throw new HttpError(400, 'Choose a password you have not used here');
+    const updated = await this.db.one<{ id: string; token_version: number }>(
+      'UPDATE users SET password_hash = $2, token_version = token_version + 1 WHERE id = $1 RETURNING id, token_version',
+      [id, await hashPassword(next)]
+    );
+    this.cache.delete(id);
+    await audit(this.db, { id, name: row.name }, 'auth.password_changed', id, undefined, ip);
+    return updated!;
+  }
+
   /** Session lookup with a 30 s cache (revocation applies within that window). */
   async byId(id: string): Promise<(AuthUser & { token_version: number; active: boolean }) | null> {
     const hit = this.cache.get(id);

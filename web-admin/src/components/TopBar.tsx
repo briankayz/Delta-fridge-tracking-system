@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Bell, ChevronDown, FlaskConical, LogOut, Menu, Search, UserRound, X } from 'lucide-react';
+import { Bell, ChevronDown, FlaskConical, KeyRound, LogOut, Menu, Search, UserRound, X } from 'lucide-react';
+import { ChangePasswordDialog } from './ChangePasswordDialog';
 import { ConnectionState } from '../types';
 import { useAuth, ROLE_LABEL } from '../services/auth';
 import { Link } from '../services/router';
@@ -18,6 +19,8 @@ export const TopBar: React.FC<TopBarProps> = ({ path, onSearchChange, onSimulate
   const { user, logout, can, meta } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
+  const [pwOpen, setPwOpen] = useState(false);
+  const [pwDone, setPwDone] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -117,6 +120,18 @@ export const TopBar: React.FC<TopBarProps> = ({ path, onSearchChange, onSimulate
                 <button
                   type="button"
                   role="menuitem"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    setPwOpen(true);
+                  }}
+                  className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm text-slate-700 hover:bg-slate-50"
+                >
+                  <KeyRound className="h-4 w-4" aria-hidden="true" />
+                  {pwDone ? 'Password changed ✓' : 'Change password'}
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
                   onClick={() => void logout()}
                   className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm text-slate-700 hover:bg-slate-50"
                 >
@@ -128,6 +143,16 @@ export const TopBar: React.FC<TopBarProps> = ({ path, onSearchChange, onSimulate
           </div>
         </div>
       </div>
+
+      {pwOpen && (
+        <ChangePasswordDialog
+          onClose={() => setPwOpen(false)}
+          onDone={() => {
+            setPwOpen(false);
+            setPwDone(true);
+          }}
+        />
+      )}
 
       {/* Mobile navigation */}
       {navOpen && (

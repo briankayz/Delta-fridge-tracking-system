@@ -6,9 +6,10 @@
   "description": "Telemetry ingest, AI risk engine and real-time WebSocket hub for Delta Asset Guard AI",
   "scripts": {
     "dev": "tsx watch --env-file-if-exists=.env src/server.ts",
-    "start": "tsx --env-file-if-exists=.env src/server.ts",
+    "start": "node --import tsx --env-file-if-exists=.env src/server.ts",
     "test": "tsx --test test/*.test.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:pg": "tsx scripts/pg-wire-test.ts"
   },
   "dependencies": {
     "@electric-sql/pglite": "0.5.15",
@@ -18,15 +19,19 @@
     "jose": "6.2.16",
     "pg": "8.23.1",
     "ws": "^8.18.0",
-    "zod": "^4.6.7"
+    "zod": "^4.6.7",
+    "tsx": "^4.19.2"
   },
   "devDependencies": {
+    "@electric-sql/pglite-socket": "0.2.18",
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
     "@types/node": "^22.10.0",
     "@types/pg": "8.15.6",
     "@types/ws": "^8.5.13",
-    "tsx": "^4.19.2",
     "typescript": "^5.6.3"
+  },
+  "engines": {
+    "node": ">=22.12"
   }
 }
