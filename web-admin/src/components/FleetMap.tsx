@@ -85,9 +85,18 @@ function iconFor(c: CoolerAsset): L.DivIcon {
     const speed = `${c.speedKmh.toFixed(0)} km/h`;
     return cachedIcon(`crit:${speed}`, () => breachIcon(speed));
   }
+  if (!c.online) return cachedIcon('offline', offlineIcon);
   if (c.status === 'warning' || c.isPowerCut) return cachedIcon('warn', warningIcon);
   return cachedIcon('ok', nominalIcon);
 }
+
+const offlineIcon = () =>
+  L.divIcon({
+    className: 'dag-marker',
+    html: `<span style="display:block;width:14px;height:14px;border-radius:9999px;background:#94A3B8;border:2.5px solid #fff;box-shadow:0 1px 4px rgba(15,23,42,.35)"></span>`,
+    iconSize: [14, 14],
+    iconAnchor: [7, 7],
+  });
 
 // ---- Map helpers ----------------------------------------------------------------------
 
@@ -112,8 +121,9 @@ export const FleetMap: React.FC<FleetMapProps> = ({ fleet, onSelectCooler }) => 
   const critical = fleet.filter((c) => c.status === 'critical');
   const counts = useMemo(
     () => ({
-      secure: fleet.filter((c) => c.status === 'nominal' && !c.isPowerCut).length,
-      power: fleet.filter((c) => c.status !== 'critical' && (c.status === 'warning' || c.isPowerCut)).length,
+      secure: fleet.filter((c) => c.online && c.status === 'nominal' && !c.isPowerCut).length,
+      power: fleet.filter((c) => c.online && c.status !== 'critical' && (c.status === 'warning' || c.isPowerCut)).length,
+      offline: fleet.filter((c) => !c.online && c.status !== 'critical').length,
       critical: critical.length,
     }),
     [fleet, critical.length]
@@ -209,9 +219,9 @@ export const FleetMap: React.FC<FleetMapProps> = ({ fleet, onSelectCooler }) => 
                     <dt className="text-slate-500">Speed</dt>
                     <dd className="text-right font-medium tabular">{c.speedKmh.toFixed(1)} km/h</dd>
                     <dt className="text-slate-500">Cabinet</dt>
-                    <dd className="text-right font-medium tabular">{c.internalTemp.toFixed(1)}°C</dd>
+                    <dd className="text-right font-medium tabular">{c.internalTemp != null ? `${c.internalTemp.toFixed(1)}°C` : '—'}</dd>
                     <dt className="text-slate-500">Power</dt>
-                    <dd className="text-right font-medium">{c.isPowerCut ? `Battery ${c.batteryPct}%` : 'Mains'}</dd>
+                    <dd className="text-right font-medium">{!c.lastSeen ? '—' : c.isPowerCut ? `Battery ${Math.round(c.batteryPct ?? 0)}%` : 'Mains'}</dd>
                   </dl>
                   <button
                     type="button"
@@ -234,7 +244,11 @@ export const FleetMap: React.FC<FleetMapProps> = ({ fleet, onSelectCooler }) => 
           </div>
           <div className="flex items-center gap-2">
             <span className="w-3 h-3 rounded-full bg-amber-600 ring-2 ring-white shadow" />
-            Power outage <span className="ml-auto pl-3 tabular text-slate-500">{counts.power}</span>
+            Power / warning <span className="ml-auto pl-3 tabular text-slate-500">{counts.power}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="w-3 h-3 rounded-full bg-slate-400 ring-2 ring-white shadow" />
+            Offline <span className="ml-auto pl-3 tabular text-slate-500">{counts.offline}</span>
           </div>
           <div className="flex items-center gap-2">
             <span className="w-3 h-3 rounded-full bg-red-600 ring-2 ring-white shadow" />

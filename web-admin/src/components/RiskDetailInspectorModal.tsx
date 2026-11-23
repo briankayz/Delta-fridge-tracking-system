@@ -3,7 +3,7 @@ import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianG
 import {
   CircleCheck,
   Clock,
-  Flag,
+  RotateCcw,
   LucideIcon,
   MapPinOff,
   Moon,
@@ -13,26 +13,28 @@ import {
   ShieldCheck,
   Sparkles,
   Thermometer,
-  Truck,
   Unplug,
   Vibrate,
   X,
   Zap,
 } from 'lucide-react';
-import { CoolerAsset, RiskReason, TrailPoint } from '../types';
+import { CoolerAsset, Incident, RiskReason, TrailPoint } from '../types';
+import { useAuth } from '../services/auth';
+import { Link } from '../services/router';
+import { IncidentActions } from './IncidentActions';
 import { api } from '../services/api';
-import { formatCat, formatDuration } from '../services/useTelemetryFeed';
+import { formatCat, formatDuration, KIND_LABEL } from '../services/useTelemetryFeed';
 import { IncidentRouteMap } from './IncidentRouteMap';
 import { Button, Card, CardHeader, Segmented, StatusBadge, STATUS_STYLE, cx } from './ui';
 
 interface RiskDetailInspectorModalProps {
   cooler: CoolerAsset | null;
+  /** The cooler's most important open incident (from the live feed), if any. */
+  incident: Incident | null;
   now: number;
   onClose: () => void;
-  onActionFeedback: (msg: string) => void;
-  onAuthorizeMove: (assetId: string) => void;
-  onDispatch: (assetId: string) => void;
-  onCallRetailer: (assetId: string) => void;
+  onIncidentChanged: (i: Incident) => void;
+  run: (label: string, fn: () => Promise<unknown>, success?: string) => Promise<boolean>;
 }
 
 const REASON_ICON: Record<string, LucideIcon> = {
@@ -135,13 +137,13 @@ const MiniChart: React.FC<{
 
 export const RiskDetailInspectorModal: React.FC<RiskDetailInspectorModalProps> = ({
   cooler,
+  incident,
   now,
   onClose,
-  onActionFeedback,
-  onAuthorizeMove,
-  onDispatch,
-  onCallRetailer,
+  onIncidentChanged,
+  run,
 }) => {
+  const { can, meta } = useAuth();
   const [range, setRange] = useState<Range>('15m');
   const [history, setHistory] = useState<TrailPoint[]>([]);
   const [historyError, setHistoryError] = useState<string | null>(null);
@@ -216,8 +218,18 @@ export const RiskDetailInspectorModal: React.FC<RiskDetailInspectorModalProps> =
                 {cooler.id}
               </h2>
               <p className="text-sm text-slate-500">
-                {cooler.coolerModel} · {cooler.retailer} · IMEI <span className="font-mono">{cooler.imei || '—'}</span>
+                {cooler.coolerModel} · {cooler.retailer} ({cooler.region})
+                {cooler.coolerSerial && <> · Serial <span className="font-mono">{cooler.coolerSerial}</span></>}
               </p>
+              {cooler.retailerContact.phone && (
+                <a
+                  href={`tel:${cooler.retailerContact.phone.replace(/\s/g, '')}`}
+                  className="mt-1 inline-flex items-center gap-1.5 text-sm font-medium text-delta-700 hover:underline"
+                >
+                  <Phone className="h-3.5 w-3.5" aria-hidden="true" />
+                  {cooler.retailerContact.name ?? 'Retailer'}: {cooler.retailerContact.phone}
+                </a>
+              )}
             </div>
             <button
               type="button"
@@ -355,37 +367,38 @@ export const RiskDetailInspectorModal: React.FC<RiskDetailInspectorModalProps> =
         </div>
 
         {/* Actions */}
-        <footer className="bg-white border-t border-line px-6 py-3 flex flex-wrap items-center justify-between gap-3">
-          <div className="text-xs text-slate-500">
-            {cooler.incidentId ? (
-              <>
-                Incident <span className="font-mono text-slate-700">{cooler.incidentId}</span> opened {formatCat(incidentStart)}
-              </>
+        <footer className="bg-white border-t border-line px-6 py-3 space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+            {incident ? (
+              <span>
+                <Link to={`/incidents/${incident.id}`} className="font-mono font-medium text-delta-700 hover:underline">
+                  {incident.id}
+                </Link>{' '}
+                · {KIND_LABEL[incident.kind]} · opened {formatCat(incident.opened_at)} ·{' '}
+                {incident.status === 'open' ? (
+                  <span className="font-medium text-red-700">unacknowledged</span>
+                ) : (
+                  <>acknowledged by {incident.acknowledged_by}</>
+                )}
+                {incident.assigned_name && <> · assigned to {incident.assigned_name}</>}
+              </span>
             ) : (
               <span className="inline-flex items-center gap-1.5">
                 <CircleCheck className="h-3.5 w-3.5 text-emerald-600" aria-hidden="true" />
                 No open incident
               </span>
             )}
+            {meta?.demo_mode && can('demo:control') && (cooler.simulationActive || cooler.status === 'critical') && (
+              <Button
+                size="sm"
+                icon={RotateCcw}
+                onClick={() => run('Demo reset', () => api.demoReset(cooler.id), 'Cooler returned to its store.')}
+              >
+                Demo: return to store
+              </Button>
+            )}
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Button onClick={() => onAuthorizeMove(cooler.id)} disabled={!cooler.incidentId}>
-              Mark as authorised move
-            </Button>
-            <Button icon={Phone} onClick={() => onCallRetailer(cooler.id)}>
-              Call retailer
-            </Button>
-            <Button
-              variant="danger"
-              icon={cooler.incidentId ? Truck : Flag}
-              onClick={() => {
-                onDispatch(cooler.id);
-                onActionFeedback(`Recovery team flagged for ${cooler.id} near ${cooler.locationName}.`);
-              }}
-            >
-              Dispatch recovery team
-            </Button>
-          </div>
+          {incident && <IncidentActions incident={incident} onChanged={onIncidentChanged} run={run} />}
         </footer>
       </div>
     </div>

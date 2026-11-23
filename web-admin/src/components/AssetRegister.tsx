@@ -82,7 +82,8 @@ export const AssetRegister: React.FC<AssetRegisterProps> = ({ fleet, onSelectCoo
             )}
             {rows.map((c) => {
               const s = STATUS_STYLE[c.status];
-              const warm = c.internalTemp > 6;
+              const warm = (c.internalTemp ?? 0) > 6;
+              const lowBattery = c.batteryPct != null && c.batteryPct < 30;
               return (
                 <tr
                   key={c.id}
@@ -93,11 +94,20 @@ export const AssetRegister: React.FC<AssetRegisterProps> = ({ fleet, onSelectCoo
                   )}
                 >
                   <td className="px-4 py-3 whitespace-nowrap">
-                    <div className="font-medium text-slate-900">{c.id}</div>
+                    <div className="font-medium text-slate-900">
+                      {c.id}
+                      {c.isVirtual && (
+                        <span className="ml-1.5 rounded bg-gold-50 px-1 py-px text-[10px] font-medium text-gold-700 ring-1 ring-inset ring-gold-300">
+                          Demo
+                        </span>
+                      )}
+                    </div>
                     <div className="text-xs text-slate-500">{c.coolerModel}</div>
                   </td>
                   <td className="px-4 py-3 min-w-[220px]">
-                    <div className="text-slate-900">{c.retailer}</div>
+                    <div className="text-slate-900">
+                      {c.retailer} <span className="text-xs text-slate-400">· {c.region}</span>
+                    </div>
                     <div className={cx('text-xs', c.isBreached ? 'text-red-700 font-medium' : 'text-slate-500')}>
                       {c.locationName}
                     </div>
@@ -114,22 +124,22 @@ export const AssetRegister: React.FC<AssetRegisterProps> = ({ fleet, onSelectCoo
                     </div>
                   </td>
                   <td className={cx('px-4 py-3 text-right tabular whitespace-nowrap', warm ? 'text-red-700 font-medium' : 'text-slate-700')}>
-                    {c.internalTemp.toFixed(1)}°C
+                    {c.internalTemp != null ? `${c.internalTemp.toFixed(1)}°C` : '—'}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     <span className={cx('inline-flex items-center gap-1.5 text-xs', c.isPowerCut ? 'text-amber-800 font-medium' : 'text-slate-600')}>
                       {c.isPowerCut ? <Unplug className="h-3.5 w-3.5" aria-hidden="true" /> : <Plug className="h-3.5 w-3.5" aria-hidden="true" />}
-                      {c.isPowerCut ? 'Mains off' : c.powerSource}
+                      {c.lastSeen ? c.powerSource : '—'}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-right whitespace-nowrap">
-                    <span className={cx('inline-flex items-center gap-1 text-xs tabular', c.batteryPct < 30 ? 'text-red-700' : 'text-slate-700')}>
-                      {c.batteryPct < 30 ? (
+                    <span className={cx('inline-flex items-center gap-1 text-xs tabular', lowBattery ? 'text-red-700' : 'text-slate-700')}>
+                      {lowBattery ? (
                         <BatteryWarning className="h-3.5 w-3.5" aria-hidden="true" />
                       ) : (
                         <BatteryMedium className="h-3.5 w-3.5 text-slate-400" aria-hidden="true" />
                       )}
-                      {c.batteryPct}%
+                      {c.batteryPct != null ? `${Math.round(c.batteryPct)}%` : '—'}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-xs text-slate-500 whitespace-nowrap tabular">{c.lastPing}</td>

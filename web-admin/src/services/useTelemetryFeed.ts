@@ -1,93 +1,128 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  AssetState,
-  ConnectionState,
-  CoolerAsset,
-  FleetSummary,
-  Incident,
-  RiskAlertItem,
-  ServerEvent,
-} from '../types';
+import { AssetState, ConnectionState, CoolerAsset, FleetSummary, Incident, ServerEvent } from '../types';
 import { api, WS_URL } from './api';
 
 export const DEMO_BEACON_ID = 'DLTA-BCN-9042';
 
-// Shown until the first snapshot arrives from the backend.
-const INITIAL_SUMMARY: FleetSummary = { total: 1420, compliant: 1385, outages: 23, anomalies: 12 };
+const EMPTY_SUMMARY: FleetSummary = { total: 0, reporting: 0, offline: 0, compliant: 0, outages: 0, anomalies: 0, open_incidents: 0 };
 
-type Toast = { id: number; title: string; description: string; type: 'critical' | 'success' | 'info' };
+export type Toast = { id: number; title: string; description: string; type: 'critical' | 'success' | 'info' };
 
-// ---- formatting helpers ---------------------------------------------------------------
+// ---- formatting helpers ---------------------------------------------------------------------
 
 export function timeAgo(iso: string | null, now: number): string {
-  if (!iso) return 'No data';
+  if (!iso) return 'Never';
   const s = Math.max(0, Math.round((now - Date.parse(iso)) / 1000));
   if (s < 5) return 'Just now';
   if (s < 60) return `${s} sec ago`;
   const m = Math.floor(s / 60);
   if (m < 60) return `${m} min ago`;
   const h = Math.floor(m / 60);
-  return `${h}h ${m % 60}m ago`;
+  if (h < 48) return `${h}h ${m % 60}m ago`;
+  return `${Math.floor(h / 24)} days ago`;
 }
 
 export function formatCat(iso: string | null): string {
   if (!iso) return '—';
-  return (
-    new Date(iso).toLocaleTimeString('en-GB', { timeZone: 'Africa/Harare', hour: '2-digit', minute: '2-digit' }) + ' CAT'
-  );
+  return new Date(iso).toLocaleTimeString('en-GB', { timeZone: 'Africa/Harare', hour: '2-digit', minute: '2-digit' }) + ' CAT';
 }
 
-export function formatDuration(fromIso: string | null, now: number): string {
+export function formatDateTime(iso: string | null): string {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleString('en-GB', {
+    timeZone: 'Africa/Harare',
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+export function formatDuration(fromIso: string | null, now: number, toIso?: string | null): string {
   if (!fromIso) return '—';
-  const s = Math.max(0, Math.round((now - Date.parse(fromIso)) / 1000));
-  const h = Math.floor(s / 3600);
+  const end = toIso ? Date.parse(toIso) : now;
+  const s = Math.max(0, Math.round((end - Date.parse(fromIso)) / 1000));
+  const d = Math.floor(s / 86400);
+  const h = Math.floor((s % 86400) / 3600);
   const m = Math.floor((s % 3600) / 60);
-  const sec = s % 60;
-  return h > 0 ? `${h}h ${String(m).padStart(2, '0')}m` : `${m}m ${String(sec).padStart(2, '0')}s`;
+  if (d > 0) return `${d}d ${h}h`;
+  return h > 0 ? `${h}h ${String(m).padStart(2, '0')}m` : `${m}m ${String(s % 60).padStart(2, '0')}s`;
 }
 
-const shortId = (id: string) => id.split('-').pop() ?? id;
+export const KIND_LABEL: Record<Incident['kind'], string> = {
+  displacement: 'Theft / displacement',
+  power: 'Power outage',
+  signal_lost: 'Beacon offline',
+};
+
+export const RESOLUTION_LABEL: Record<string, string> = {
+  returned: 'Returned to store',
+  authorized: 'Authorised move',
+  recovered: 'Recovered',
+  false_alarm: 'False alarm',
+  not_found: 'Not found (closed)',
+  power_restored: 'Power restored',
+  signal_restored: 'Signal restored',
+  reset: 'Demo reset',
+};
 
 /** Server AssetState -> dashboard view model. */
 export function toCoolerAsset(a: AssetState, now: number): CoolerAsset {
   const offHours = a.mains_off_since ? (now - Date.parse(a.mains_off_since)) / 3_600_000 : 0;
-  const statusLabel =
-    a.risk.severity === 'critical'
-      ? a.risk.geofenceBreached
-        ? 'Geofence Breach'
-        : 'High Risk'
-      : a.risk.severity === 'warning'
-      ? !a.mains_connected
-        ? `Outage > ${Math.floor(offHours)}h`
-        : 'Warning'
-      : !a.mains_connected
-      ? 'Mains Cut'
-      : 'Nominal';
+  const kinds = new Set(a.open_incidents.map((i) => i.kind));
+  const statusLabel = !a.last_seen
+    ? 'Not reporting'
+    : a.risk.severity === 'critical'
+    ? a.risk.geofenceBreached
+      ? 'Geofence breach'
+      : 'High risk'
+    : kinds.has('signal_lost') || !a.online
+    ? 'Offline'
+    : a.relocation
+    ? 'Approved move'
+    : a.risk.severity === 'warning'
+    ? !a.mains_connected
+      ? `Unplugged ${Math.floor(offHours)}h`
+      : 'Warning'
+    : !a.mains_connected
+    ? 'Unplugged'
+    : 'Secure';
+  const status = a.risk.severity === 'nominal' && (!a.online || kinds.has('signal_lost')) && a.last_seen ? 'warning' : a.risk.severity;
+  const displacement = a.open_incidents.find((i) => i.kind === 'displacement');
 
   return {
     id: a.id,
     coolerModel: a.model,
+    coolerSerial: a.cooler_serial,
     retailer: a.retailer_name,
+    retailerId: a.retailer_id,
+    region: a.region,
+    retailerContact: a.retailer_contact,
     locationName: a.location_name,
     lat: a.lat,
     lng: a.lng,
-    status: a.risk.severity,
+    status,
     statusLabel,
-    internalTemp: a.internal_temp_c ?? 0,
-    powerSource: a.mains_connected ? `${Math.round(a.voltage_ac ?? 230)}V AC Mains` : 'Mains Cut (0V)',
-    batteryPct: a.battery_pct ?? 0,
+    internalTemp: a.internal_temp_c,
+    powerSource: a.mains_connected ? `${Math.round(a.voltage_ac ?? 230)}V mains` : 'Mains off',
+    batteryPct: a.battery_pct,
     lastPing: timeAgo(a.last_seen, now),
     lastSeen: a.last_seen,
+    online: a.online,
+    isVirtual: a.is_virtual,
+    provisioned: a.provisioned,
     speedKmh: a.speed_kmh,
     riskScore: a.risk.score,
     confidencePct: a.risk.confidence,
     riskReasons: a.risk.reasons,
     geofenceRadiusM: a.geofence_radius_m,
     displacementM: a.distance_m,
-    routeOrigin: { name: `${a.retailer_name} (Origin)`, lat: a.anchor.lat, lng: a.anchor.lng },
+    routeOrigin: { name: `${a.retailer_name} (store)`, lat: a.anchor.lat, lng: a.anchor.lng },
     trail: a.trail.map((p) => [p.lat, p.lng] as [number, number]),
     incidentId: a.incident_id,
-    incidentOpenedAt: a.trail[0]?.t ?? null,
+    incidentOpenedAt: displacement ? a.trail[0]?.t ?? null : null,
+    openIncidents: a.open_incidents,
+    relocation: a.relocation,
     isBreached: a.risk.geofenceBreached,
     isPowerCut: !a.mains_connected,
     mainsOffSince: a.mains_off_since,
@@ -99,61 +134,12 @@ export function toCoolerAsset(a: AssetState, now: number): CoolerAsset {
 
 const SEVERITY_RANK = { critical: 0, warning: 1, nominal: 2 } as const;
 
-function buildAlerts(fleet: CoolerAsset[], incidents: Incident[], now: number): RiskAlertItem[] {
-  const active: RiskAlertItem[] = fleet
-    .filter((c) => c.status !== 'nominal')
-    .map((c) => {
-      const critical = c.status === 'critical';
-      const since = critical ? c.incidentOpenedAt : c.mainsOffSince ?? c.lastSeen;
-      const lead = c.riskReasons[0];
-      return {
-        id: c.incidentId ?? `WARN-${c.id}`,
-        assetId: c.id,
-        title: `${c.coolerModel} #${shortId(c.id)}`,
-        severity: critical ? 'critical' : 'warning',
-        timeAgo: since ? `T+ ${formatDuration(since, now)}` : '',
-        description: critical
-          ? `${lead?.detail ?? 'High theft risk.'} Moving at ${c.speedKmh.toFixed(1)} km/h.`
-          : c.riskReasons.map((r) => r.label).join(' • ') || 'Elevated risk',
-        originStore: c.retailer,
-        currentLocation: `${c.locationName} (${c.lat.toFixed(4)}, ${c.lng.toFixed(4)})`,
-        speedKmh: c.speedKmh,
-        tempC: c.internalTemp,
-        powerStatus: c.isPowerCut ? `BAT ${c.batteryPct}%` : 'AC OK',
-        riskPct: c.riskScore,
-        timestamp: formatCat(since),
-      };
-    });
-  active.sort((a, b) => (a.severity === b.severity ? b.riskPct - a.riskPct : a.severity === 'critical' ? -1 : 1));
+// ---- hook -------------------------------------------------------------------------------------
 
-  const resolved: RiskAlertItem[] = incidents
-    .filter((i) => i.status === 'resolved')
-    .slice(0, 3)
-    .map((i) => ({
-      id: i.id,
-      assetId: i.asset_id,
-      title: `#${shortId(i.asset_id)} • ${i.resolution === 'authorized' ? 'Authorized move' : i.resolution === 'returned' ? 'Geofence re-entry' : 'Incident closed'}`,
-      severity: 'resolved',
-      timeAgo: timeAgo(i.resolved_at, now),
-      description: `${i.id} closed ${timeAgo(i.resolved_at, now)} • peak risk ${i.peak_score}%`,
-      originStore: i.origin.name,
-      currentLocation: '',
-      speedKmh: 0,
-      tempC: 0,
-      powerStatus: '',
-      riskPct: 0,
-      timestamp: formatCat(i.resolved_at),
-    }));
-
-  return [...active, ...resolved];
-}
-
-// ---- hook -----------------------------------------------------------------------------
-
-export function useTelemetryFeed() {
+export function useTelemetryFeed(enabled: boolean) {
   const [assets, setAssets] = useState<Record<string, AssetState>>({});
-  const [incidents, setIncidents] = useState<Incident[]>([]);
-  const [summary, setSummary] = useState<FleetSummary>(INITIAL_SUMMARY);
+  const [incidents, setIncidents] = useState<Record<string, Incident>>({});
+  const [summary, setSummary] = useState<FleetSummary>(EMPTY_SUMMARY);
   const [connection, setConnection] = useState<ConnectionState>('connecting');
   const [flashingRowId, setFlashingRowId] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<Toast | null>(null);
@@ -161,7 +147,6 @@ export function useTelemetryFeed() {
   const [now, setNow] = useState(() => Date.now());
   const flashTimer = useRef<ReturnType<typeof setTimeout>>();
 
-  // Relative times ("12 sec ago", "T+ 3m 05s") tick once a second.
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(t);
@@ -172,45 +157,53 @@ export function useTelemetryFeed() {
     setToastMessage({ id, title, description, type });
     setTimeout(() => setToastMessage((prev) => (prev?.id === id ? null : prev)), 6000);
   }, []);
-
   const dismissToast = useCallback(() => setToastMessage(null), []);
+
+  const upsertIncident = useCallback((i: Incident) => setIncidents((prev) => ({ ...prev, [i.id]: { ...prev[i.id], ...i } })), []);
 
   const handleEvent = useCallback(
     (ev: ServerEvent) => {
       setSummary(ev.summary);
-      if (ev.type === 'snapshot') {
-        setAssets(Object.fromEntries(ev.assets.map((a) => [a.id, a])));
-        setIncidents(ev.incidents);
-        return;
-      }
-      setAssets((prev) => ({ ...prev, [ev.asset.id]: ev.asset }));
-
-      if (ev.type === 'incident.opened') {
-        setIncidents((prev) => [ev.incident, ...prev.filter((i) => i.id !== ev.incident.id)]);
-        clearTimeout(flashTimer.current);
-        setFlashingRowId(ev.asset.id);
-        flashTimer.current = setTimeout(() => setFlashingRowId(null), 3000);
-        setInspectRequest({ id: ev.asset.id, nonce: Date.now() });
-        triggerToast(
-          `CRITICAL BREACH: ${ev.asset.id}`,
-          `${ev.incident.reasons.map((r) => r.label).join(' • ')}. AI risk ${ev.asset.risk.score}% (confidence ${ev.asset.risk.confidence}%).`,
-          'critical',
-        );
-      } else if (ev.type === 'incident.resolved') {
-        setIncidents((prev) => [ev.incident, ...prev.filter((i) => i.id !== ev.incident.id)]);
-        triggerToast(
-          `Incident ${ev.incident.id} resolved`,
-          `${ev.asset.id} is ${ev.incident.resolution === 'authorized' ? 'marked as an authorized move' : 'back inside its geofence'}.`,
-          'success',
-        );
+      switch (ev.type) {
+        case 'snapshot':
+          setAssets(Object.fromEntries(ev.assets.map((a) => [a.id, a])));
+          setIncidents(Object.fromEntries(ev.incidents.map((i) => [i.id, i])));
+          return;
+        case 'asset.updated':
+          setAssets((prev) => ({ ...prev, [ev.asset.id]: ev.asset }));
+          return;
+        case 'incident.updated':
+          upsertIncident(ev.incident);
+          return;
+        case 'incident.opened':
+          setAssets((prev) => ({ ...prev, [ev.asset.id]: ev.asset }));
+          upsertIncident(ev.incident);
+          clearTimeout(flashTimer.current);
+          setFlashingRowId(ev.asset.id);
+          flashTimer.current = setTimeout(() => setFlashingRowId(null), 3200);
+          if (ev.incident.kind === 'displacement') setInspectRequest({ id: ev.asset.id, nonce: Date.now() });
+          triggerToast(
+            `${KIND_LABEL[ev.incident.kind]} · ${ev.asset.id}`,
+            `${ev.incident.reasons.map((r) => r.label).join(' · ') || 'New incident'}. ${ev.incident.id} opened.`,
+            ev.incident.kind === 'displacement' ? 'critical' : 'info'
+          );
+          return;
+        case 'incident.resolved':
+          setAssets((prev) => ({ ...prev, [ev.asset.id]: ev.asset }));
+          upsertIncident(ev.incident);
+          triggerToast(
+            `${ev.incident.id} resolved`,
+            `${ev.asset.id}: ${RESOLUTION_LABEL[ev.incident.resolution ?? ''] ?? 'closed'}${ev.incident.resolved_by ? ` by ${ev.incident.resolved_by}` : ''}.`,
+            'success'
+          );
       }
     },
-    [triggerToast],
+    [triggerToast, upsertIncident]
   );
 
-  // WebSocket with exponential back-off. `disposed` stops reconnects after unmount
-  // (React StrictMode mounts effects twice in development).
+  // Authenticated WebSocket (session cookie) with exponential back-off.
   useEffect(() => {
+    if (!enabled) return;
     let ws: WebSocket | null = null;
     let disposed = false;
     let retry: ReturnType<typeof setTimeout> | undefined;
@@ -234,8 +227,8 @@ export function useTelemetryFeed() {
       ws.onclose = () => {
         if (disposed) return;
         setConnection('offline');
-        const delay = Math.min(10_000, 1000 * 2 ** attempt++);
-        retry = setTimeout(connect, delay);
+        api.me().catch(() => undefined); // a 401 here returns the app to the sign-in screen
+        retry = setTimeout(connect, Math.min(15_000, 1000 * 2 ** attempt++));
       };
       ws.onerror = () => ws?.close();
     };
@@ -246,60 +239,52 @@ export function useTelemetryFeed() {
       clearTimeout(retry);
       ws?.close();
     };
-  }, [handleEvent]);
+  }, [enabled, handleEvent]);
 
   const fleet = useMemo(
     () =>
       Object.values(assets)
         .map((a) => toCoolerAsset(a, now))
         .sort((a, b) => SEVERITY_RANK[a.status] - SEVERITY_RANK[b.status] || b.riskScore - a.riskScore || a.id.localeCompare(b.id)),
-    [assets, now],
+    [assets, now]
   );
 
-  const alerts = useMemo(() => buildAlerts(fleet, incidents, now), [fleet, incidents, now]);
-
-  const simulateBreach = useCallback(
-    async (id: string = DEMO_BEACON_ID) => {
-      try {
-        await api.simulateBreach(id);
-      } catch (err) {
-        triggerToast('Simulation failed', `Backend unreachable or rejected the request: ${(err as Error).message}`, 'critical');
-      }
-    },
-    [triggerToast],
+  const incidentList = useMemo(
+    () =>
+      Object.values(incidents).sort(
+        (a, b) => Number(a.status === 'resolved') - Number(b.status === 'resolved') || Date.parse(b.opened_at) - Date.parse(a.opened_at)
+      ),
+    [incidents]
   );
 
-  const resetAsset = useCallback(
-    async (id: string, resolution: 'authorized' | 'reset' = 'reset') => {
+  const run = useCallback(
+    async (label: string, fn: () => Promise<unknown>, success?: string) => {
       try {
-        const res = await api.reset(id, resolution);
-        if (!res.incident) triggerToast('No open incident', `${id} had no open incident to close.`, 'info');
+        await fn();
+        if (success) triggerToast(label, success, 'success');
+        return true;
       } catch (err) {
-        triggerToast('Action failed', (err as Error).message, 'critical');
+        triggerToast(`${label} failed`, (err as Error).message, 'critical');
+        return false;
       }
     },
-    [triggerToast],
+    [triggerToast]
   );
 
   return {
     fleet,
-    alerts,
-    incidents,
-    kpiCounts: {
-      totalTracked: summary.total,
-      activeCompliant: summary.compliant,
-      powerOutages: summary.outages,
-      anomalyAlerts: summary.anomalies,
-    },
+    incidents: incidentList,
+    upsertIncident,
+    summary,
     flashingRowId,
     connection,
-    isConnected: connection === 'live',
     toastMessage,
     triggerToast,
     dismissToast,
     inspectRequest,
-    simulateBreach,
-    resetAsset,
+    run,
     now,
   };
 }
+
+export type Feed = ReturnType<typeof useTelemetryFeed>;
