@@ -43,7 +43,7 @@ export const InstallScreen: React.FC = () => {
     () =>
       retailers
         .filter((r) => !query || `${r.name} ${r.region} ${r.address ?? ''}`.toLowerCase().includes(query.toLowerCase()))
-        .sort((a, b) => distanceM(fix, a.lat, a.lng) - distanceM(fix, b.lat, b.lng))
+        .sort((a, b) => distanceM(fix, a.lat, a.lng) - distanceM(fix, b.lat, b.lng) || a.name.localeCompare(b.name))
         .slice(0, 25),
     [retailers, query, fix]
   );

@@ -189,3 +189,29 @@ test('serves the built dashboard with a strict CSP when present', async () => {
   assert.match(res.headers.get('content-security-policy') ?? '', /frame-ancestors 'none'/);
   assert.equal((await fetch(`${t.base}/api/v1/nope`)).status, 404);
 });
+
+test('accepts the full hardware payload (ESP32/SIM7000G/MPU6050 twin) and stores it', async () => {
+  const body = {
+    ...nominal('BCN-9042'),
+    timestamp: new Date().toISOString(),
+    firmware_version: 'fw-1.0.0',
+    bearing_deg: 0,
+    gps: { latitude: -17.79421, longitude: 31.03784, altitude_m: 1492, accuracy_m: 2.5, hdop: 0.8, satellites: 12, fix: '3d' },
+    accelerometer: { accel_x: 0.002, accel_y: -0.001, accel_z: 0.998, accel_raw: [33, -16, 16351], tilt_deg: 0.4, vibration_rms: 0.004, vibration_status: 'Nominal' },
+    power: { mains_connected: true, voltage_ac: 231, frequency_hz: 50, battery_level_pct: 98, battery_charging: true },
+    cellular: { rssi_dbm: -73, csq: 20, network: 'LTE-M', registered: true },
+    firmware: { version: 'fw-1.0.0', state: 'ARMED_NOMINAL', seq: 42, uptime_s: 3600, heartbeat_s: 300, buffered: 0 },
+    simulated: ['power.voltage_ac', 'cellular', 'cold_chain'],
+  };
+  await new Promise((r) => setTimeout(r, 1100)); // clear the per-device rate limit window
+  const r = await t.call('POST', '/api/v1/telemetry', body, undefined, { authorization: `Device ${deviceToken}` });
+  assert.equal(r.status, 202, JSON.stringify(r.body));
+  const row = await t.svc.db.one<{ payload: any }>(`SELECT payload FROM telemetry WHERE asset_id = 'BCN-9042' ORDER BY id DESC LIMIT 1`);
+  assert.equal(row!.payload.firmware.state, 'ARMED_NOMINAL');
+  assert.deepEqual(row!.payload.accelerometer.accel_raw, [33, -16, 16351]);
+  assert.equal(row!.payload.cellular.rssi_dbm, -73);
+  assert.deepEqual(row!.payload.simulated, ['power.voltage_ac', 'cellular', 'cold_chain']);
+
+  const bad = await t.call('POST', '/api/v1/telemetry', { ...body, firmware: { state: 'PANIC' } }, undefined, { authorization: `Device ${deviceToken}` });
+  assert.equal(bad.status, 400);
+});

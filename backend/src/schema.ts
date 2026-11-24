@@ -1,15 +1,23 @@
 import { z } from 'zod';
 
-// Runtime contract for POST /api/v1/telemetry (FridgeTelemetryPayload from the beacon).
-// Only the fields the risk engine needs are required; client-computed fields such as
-// risk_score_pct / geofence_breached / displacement_distance_m are accepted but ignored —
-// the server is the authority on risk.
+// Runtime contract for POST /api/v1/telemetry: FridgeTelemetryPayload from the in-fridge beacon
+// (ESP32 + SIM7000G + MPU6050 firmware, or the field app's hardware twin in demo mode).
+// This schema is the single source of truth for the device contract (see docs/HARDWARE.md).
+//
+// Only the fields the risk engine needs are required. Everything else is optional and additive,
+// so older senders keep working. Client-computed risk fields (risk_score_pct, geofence_breached,
+// displacement_distance_m) are accepted but ignored: the server is the authority on risk.
+// Units are engineering units, not raw registers, except accel_raw (MPU6050 int16 counts).
 
 const finite = z.number().finite();
+const int16 = z.number().int().min(-32768).max(32767);
+
+export const FIRMWARE_STATES = ['IDLE_PROVISIONING', 'ARMED_NOMINAL', 'ALARM_BREACH_ACTIVE'] as const;
 
 export const TelemetryPayloadSchema = z.object({
   device_id: z.string().min(3).max(64).regex(/^[A-Za-z0-9_-]+$/),
   cooler_id: z.string().max(64).optional(),
+  /** ISO-8601 UTC from the GNSS/RTC clock. The server records its own receive time too. */
   timestamp: z.string().max(40).optional(),
   retailer_id: z.string().max(64).optional(),
   retailer_name: z.string().max(120).optional(),
@@ -17,23 +25,39 @@ export const TelemetryPayloadSchema = z.object({
   imei: z.string().max(20).optional(),
   status: z.string().max(32).optional(),
   geofence_radius_m: finite.min(5).max(5000).optional(),
+  /** Ground speed in km/h (SIM7000G +CGNSINF field 7). */
   speed_kmh: finite.min(0).max(300),
+  /** Course over ground, degrees true (+CGNSINF field 8). */
   bearing_deg: finite.optional(),
   gps: z.object({
     latitude: finite.min(-90).max(90),
     longitude: finite.min(-180).max(180),
+    altitude_m: finite.optional(),
     accuracy_m: finite.optional(),
+    hdop: finite.min(0).max(99.9).optional(),
+    satellites: z.number().int().min(0).max(64).optional(),
+    fix: z.enum(['none', '2d', '3d']).optional(),
   }),
   accelerometer: z
     .object({
+      /** Acceleration per axis in g (MPU6050 ±2g range). */
+      accel_x: finite.min(-16).max(16).optional(),
+      accel_y: finite.min(-16).max(16).optional(),
+      accel_z: finite.min(-16).max(16).optional(),
+      /** Raw MPU6050 ACCEL_XOUT/YOUT/ZOUT registers (int16, 16384 LSB/g at ±2g). */
+      accel_raw: z.tuple([int16, int16, int16]).optional(),
       tilt_deg: finite.optional(),
+      /** RMS of dynamic acceleration (|a| - 1g) over the sample window, in g. */
+      vibration_rms: finite.min(0).max(16).optional(),
       vibration_status: z.string().max(16).optional(),
     })
     .optional(),
   power: z.object({
     mains_connected: z.boolean(),
     voltage_ac: finite.optional(),
+    frequency_hz: finite.optional(),
     battery_level_pct: finite.min(0).max(100).optional(),
+    battery_charging: z.boolean().optional(),
   }),
   cold_chain: z
     .object({
@@ -41,6 +65,30 @@ export const TelemetryPayloadSchema = z.object({
       target_max_temp_c: finite.optional(),
     })
     .optional(),
+  cellular: z
+    .object({
+      /** Received signal strength, dBm (from AT+CSQ: -113 + 2 * csq). */
+      rssi_dbm: finite.min(-140).max(0).optional(),
+      /** Raw AT+CSQ value 0-31 (99 = unknown). */
+      csq: z.number().int().min(0).max(99).optional(),
+      network: z.enum(['LTE-M', 'NB-IoT', 'GSM', 'WIFI', 'UNKNOWN']).optional(),
+      registered: z.boolean().optional(),
+    })
+    .optional(),
+  firmware: z
+    .object({
+      version: z.string().max(32).optional(),
+      state: z.enum(FIRMWARE_STATES).optional(),
+      /** Monotonic message counter since boot (detects gaps and replays). */
+      seq: z.number().int().min(0).optional(),
+      uptime_s: z.number().int().min(0).optional(),
+      heartbeat_s: finite.min(0.5).max(86_400).optional(),
+      /** Readings waiting in the on-device offline buffer when this one was sent. */
+      buffered: z.number().int().min(0).optional(),
+    })
+    .optional(),
+  /** Dotted paths of values that were simulated rather than measured (e.g. "power.voltage_ac"). */
+  simulated: z.array(z.string().max(48)).max(32).optional(),
 });
 
 export type TelemetryPayload = z.infer<typeof TelemetryPayloadSchema>;

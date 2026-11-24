@@ -81,6 +81,7 @@ Production is one deployable: the backend serves the built dashboard (`WEB_DIST`
 - Schema changes: append a new entry to `backend/src/db/migrations.ts`; never edit an applied one.
 - Map tiles must be keyless (OSM standard, Esri imagery / light-grey canvas). **Never CARTO** (watermarks without a key).
 - Field app: plain words, one status per screen, 52dp+ touch targets, strings in `mobile-beacon/src/i18n.ts`.
+- `mobile-beacon/src/hardware/` is the firmware reference twin (ESP32 + SIM7000G + MPU6050 + DS18B20). Payload changes go in `backend/src/schema.ts` first (additive, optional fields), then `hardware/telemetryPayload.ts`, then `docs/HARDWARE.md`. Simulated values must be listed in the payload's `simulated` array and tagged `[SIM]` in the serial log.
 
 ## Roles
 

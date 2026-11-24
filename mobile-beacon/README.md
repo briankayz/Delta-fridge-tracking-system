@@ -31,6 +31,16 @@ The app finds the backend automatically (the laptop running Expo, port 8787). Ov
   phone and sent automatically when the connection returns.
 - All text is in `src/i18n.ts`, ready for Shona/Ndebele translations.
 
+## Hardware twin (demo beacon)
+
+`src/hardware/` is a software twin of the in-fridge beacon (ESP32 + SIM7000G + MPU6050 + DS18B20):
+sensor modules, a `setup()`/`loop()` firmware emulation with the `IDLE_PROVISIONING` →
+`ARMED_NOMINAL` → `ALARM_BREACH_ACTIVE` state machine, an offline buffer, and the exact payload the
+firmware must send. In the app: **More → Demo mode → Use this phone as the beacon → Advanced** shows
+the firmware state, a sensor readout and the serial console (`[GPS] FIX OK 14 SATS`, `[HTTP] POST 202 OK`).
+Options there: use the phone charger as the mains sensor, and the heartbeat (5 s demo / 5 min hardware).
+The screen stays awake while the twin runs. Porting guide: [`src/hardware/README.md`](src/hardware/README.md).
+
 ## Honest limits
 
 - A phone cannot measure a fridge's mains voltage or cabinet temperature. In demo beacon mode those
